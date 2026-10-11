@@ -96,6 +96,10 @@ const dry = JSON.parse(
   npm([
     'publish',
     '--dry-run',
+    // Validate publication contents even after this version is released.
+    // Force skips npm's registry version lookup; dry-run prevents publishing.
+    '--force',
+    '--offline',
     '--json',
     '--ignore-scripts',
     '--access',
@@ -103,6 +107,9 @@ const dry = JSON.parse(
   ]),
 );
 assert(dry['ipc-sentinel@0.1.0'] || dry.id === 'ipc-sentinel@0.1.0');
+const dryPackage = dry['ipc-sentinel@0.1.0'] ?? dry;
+assert.equal(dryPackage.integrity, packed.integrity);
+assert.equal(dryPackage.files.length, packed.files.length);
 console.log(
   `Packed exports, installed CLI shim, secure/unsafe fixtures, JSON, SARIF and publication dry-run passed (${packed.files.length} files, ${packed.size} packed bytes). Consumer: ${temp}`,
 );
