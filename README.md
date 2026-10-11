@@ -1,10 +1,32 @@
+<div align="center">
+
 # IPC Sentinel
 
-Local-first Electron IPC relationship and security analysis.
+**Understand your Electron IPC boundaries. Review risks with confidence.**
+
+Local-first security and IPC relationship analysis for JavaScript and TypeScript.
+
+[![npm version](https://img.shields.io/npm/v/ipc-sentinel?style=flat-square&color=cb3837)](https://www.npmjs.com/package/ipc-sentinel)
+[![Node.js compatibility](https://img.shields.io/badge/node-%E2%89%A522.13-339933?style=flat-square&logo=nodedotjs&logoColor=white)](#compatibility)
+[![Validation](https://img.shields.io/github/actions/workflow/status/Laxyny/IPC-Sentinel/ci.yml?branch=main&style=flat-square&label=CI&logo=github)](https://github.com/Laxyny/IPC-Sentinel/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
+[![Report format](https://img.shields.io/badge/reports-SARIF%202.1.0-8b5cf6?style=flat-square)](docs/ci-integration.md)
+
+[Quick start](#installation-and-quick-start) · [Rules](docs/rules.md) · [Configuration](docs/configuration.md) · [API](#programmatic-api) · [Contributing](CONTRIBUTING.md)
+
+</div>
+
+---
 
 IPC boundaries are easy to widen accidentally: a preload can forward arbitrary channels, a renderer can invoke an event-only channel, or two modules can register the same invoke handler. IPC Sentinel scans JavaScript and TypeScript with the TypeScript compiler API and gives actionable findings with source locations, confidence, and related registration sites.
 
-Version 0.1.0 is the initial release. Its rules have documented limits and conservative confidence levels. The pre-publication checks are recorded in [release validation](docs/release-validation.md).
+| Map IPC relationships                                                                                                             | Review security boundaries                                                                                             | Fit your workflow                                                                       |
+| :-------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------- |
+| Connect discovered channels and registrations. Spot missing handlers, method mismatches, and duplicate invoke registration sites. | Inspect exposed bridge capabilities, explicit unsafe preferences, and privileged handlers that need validation review. | Use the CLI or typed API. Export text, JSON, or SARIF, and keep suppressions auditable. |
+
+**Source stays local.** Scanning does not execute your project or send its source over the network. Every finding includes evidence and remediation guidance.
+
+Version 0.1.0 is the initial release, with documented rule limits and conservative confidence levels. See [release validation](docs/release-validation.md) for the checks performed.
 
 ## Capabilities
 
@@ -28,7 +50,8 @@ npx ipc-sentinel rules
 npx ipc-sentinel explain IPC001
 ```
 
-To build and install the local package:
+<details>
+<summary><strong>Build and install from source</strong></summary>
 
 ```sh
 npm ci
@@ -38,6 +61,10 @@ npm pack
 npm install --save-dev /path/to/ipc-sentinel-0.1.0.tgz
 npx ipc-sentinel scan .
 ```
+
+</details>
+
+## From exposed capability to explicit operation
 
 For example, this preload exposes an unrestricted capability:
 
@@ -148,6 +175,16 @@ This is a static review tool, not proof of application security. Finding kinds s
 There is no complete control-flow, taint or contract compatibility analysis. No parameter-selected-channel allowlist proof, request/response type comparison, wrapper call-site instantiation, independent-window reachability or runtime registration-order model. IPC002 intentionally asks for review even when a helper validates requests; names or a call to `validate` do not prove all paths are guarded. Local helpers are followed to depth three; imported runtime libraries are not inspected. Navigation policies, permission handlers, preload path resolution, CSP, fuses and remote-code trust are not comprehensively audited. External HTTPS constants are not a general guarantee of safe destinations. Const object evaluation assumes no later mutation. CommonJS channel-module exports and tsconfig inheritance are not resolved. No autofix is offered because security boundary changes require application-specific decisions.
 
 Source discovery skips symlinks, dependencies and generated outputs, limits file/byte counts, and sanitizes terminal control characters. These are defensive safeguards, not isolation against a concurrently mutating hostile filesystem. [Architecture](docs/architecture.md) and [research](docs/research-and-positioning.md) explain the tradeoffs.
+
+## Documentation
+
+| Guide                                                        | What you will find                                                               |
+| :----------------------------------------------------------- | :------------------------------------------------------------------------------- |
+| [Rules](docs/rules.md)                                       | Evidence, remediation, confidence, and known false positives for all nine rules. |
+| [Configuration](docs/configuration.md)                       | Discovery patterns, thresholds, resource limits, and suppressions.               |
+| [CI integration](docs/ci-integration.md)                     | Exit codes, SARIF upload, and release workflow examples.                         |
+| [Architecture](docs/architecture.md)                         | Source discovery, semantic resolution, and report generation.                    |
+| [Research and positioning](docs/research-and-positioning.md) | Scope, design decisions, and tradeoffs.                                          |
 
 ## Development and maintenance
 
