@@ -4,7 +4,7 @@ Local-first Electron IPC relationship and security analysis.
 
 IPC boundaries are easy to widen accidentally: a preload can forward arbitrary channels, a renderer can invoke an event-only channel, or two modules can register the same invoke handler. IPC Sentinel scans JavaScript and TypeScript with the TypeScript compiler API and gives actionable findings with source locations, confidence, and related registration sites.
 
-Version 0.1.0 is an initial release candidate. It is prepared for distribution but has not been published. The npm name remains provisional until registry ownership is confirmed.
+Version 0.1.0 is the initial release. Its rules have documented limits and conservative confidence levels. The pre-publication checks are recorded in [release validation](docs/release-validation.md).
 
 ## Capabilities
 
@@ -18,7 +18,7 @@ Version 0.1.0 is an initial release candidate. It is prepared for distribution b
 
 ## Installation and quick start
 
-After an approved npm release:
+Install from npm:
 
 ```sh
 npm install --save-dev ipc-sentinel
@@ -28,7 +28,7 @@ npx ipc-sentinel rules
 npx ipc-sentinel explain IPC001
 ```
 
-Before publication, build and install the local package:
+To build and install the local package:
 
 ```sh
 npm ci

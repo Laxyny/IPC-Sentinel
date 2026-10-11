@@ -1,6 +1,6 @@
 # 0.1.0 release candidate validation
 
-Validation date: 12 October 2026 (Europe/Paris). Package identity: `ipc-sentinel@0.1.0`, MIT. Initial registry lookup returned E404; name availability and publisher ownership remain unconfirmed until publication approval.
+Validation date: 12 October 2026 (Europe/Paris). This document records checks before first publication. Package identity: `ipc-sentinel@0.1.0`, MIT. Initial registry lookup returned E404; name availability and publisher ownership were unconfirmed at that stage.
 
 ## Product scope
 
@@ -50,7 +50,7 @@ The [six-job workflow](https://github.com/Laxyny/IPC-Sentinel/actions/runs/38184
 
 ## Publication status and remaining gates
 
-The local package gates passed. Nothing was published to npm, no public GitHub release was created, and no tag was pushed. The artifact is an initial release candidate, not an already available registry package.
+The local package gates passed. At the time of this validation record, nothing had been published to npm, no public GitHub release had been created, and no tag had been pushed. Publication was subsequently authorized by the user on 12 October 2026. Actual registry availability must be verified after publishing.
 
 Before publication: confirm the final six-job CI matrix, merge reviewed changes to the default branch, approve the exact package/version/revision, verify npm authentication and ownership, configure the GitHub protected `npm-release` environment and npm trusted publisher, rerun release validation on the approved commit, publish through the approved route, and verify public installation. A first-package bootstrap may need an approved authenticated initial publication if npm requires an existing package before trusted publisher setup. No credentials should be pasted into source.
 
