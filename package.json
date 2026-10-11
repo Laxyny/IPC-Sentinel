@@ -5,15 +5,44 @@
   "type": "module",
   "license": "MIT",
   "author": "IPC Sentinel contributors",
-  "repository": {"type": "git", "url": "https://github.com/Laxyny/IPC-Sentinel.git"},
-  "bugs": {"url": "https://github.com/Laxyny/IPC-Sentinel/issues"},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Laxyny/IPC-Sentinel.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Laxyny/IPC-Sentinel/issues"
+  },
   "homepage": "https://github.com/Laxyny/IPC-Sentinel#readme",
-  "keywords": ["electron", "ipc", "security", "static-analysis", "sarif"],
-  "engines": {"node": ">=22.13.0"},
+  "keywords": [
+    "electron",
+    "ipc",
+    "security",
+    "static-analysis",
+    "sarif"
+  ],
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "packageManager": "npm@11.6.4",
-  "bin": {"ipc-sentinel": "dist/cli.js"},
-  "exports": {".": {"types": "./dist/index.d.ts", "import": "./dist/index.js", "require": "./dist/index.js"}},
-  "files": ["dist", "docs", "README.md", "LICENSE", "CHANGELOG.md", "SECURITY.md", "ipc-sentinel.schema.json"],
+  "bin": {
+    "ipc-sentinel": "dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "docs",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "SECURITY.md",
+    "ipc-sentinel.schema.json"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
@@ -27,6 +56,17 @@
     "validate": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build && npm run test:package",
     "prepack": "npm run build"
   },
-  "dependencies": {"picomatch": "4.0.7", "typescript": "5.9.3"},
-  "devDependencies": {"@types/node": "22.20.5", "@types/picomatch": "4.0.3", "@vitest/coverage-v8": "5.0.3", "eslint": "9.39.5", "typescript-eslint": "8.71.1", "prettier": "3.9.10", "vitest": "5.0.3"}
+  "dependencies": {
+    "picomatch": "4.0.7",
+    "typescript": "5.9.3"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "@types/picomatch": "4.0.3",
+    "@vitest/coverage-v8": "4.1.11",
+    "eslint": "10.12.0",
+    "prettier": "3.9.10",
+    "typescript-eslint": "8.71.1",
+    "vitest": "4.1.11"
+  }
 }
