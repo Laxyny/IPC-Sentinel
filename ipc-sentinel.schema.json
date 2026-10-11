@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Laxyny/IPC-Sentinel/main/ipc-sentinel.schema.json",
+  "title": "IPC Sentinel configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "definitions": {
+    "ruleId": {
+      "type": "string",
+      "enum": [
+        "IPC001",
+        "IPC002",
+        "IPC003",
+        "IPC004",
+        "IPC005",
+        "IPC006",
+        "IPC007",
+        "IPC008",
+        "IPC009"
+      ]
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["off", "critical", "high", "medium", "low", "informational"]
+    },
+    "patterns": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 512,
+        "pattern": "^[^!]"
+      }
+    },
+    "positiveInteger": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    }
+  },
+  "properties": {
+    "include": { "$ref": "#/definitions/patterns" },
+    "exclude": { "$ref": "#/definitions/patterns" },
+    "rules": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/definitions/ruleId" },
+      "additionalProperties": { "$ref": "#/definitions/severity" }
+    },
+    "suppressions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ruleId", "file"],
+        "properties": {
+          "ruleId": { "$ref": "#/definitions/ruleId" },
+          "file": { "type": "string", "minLength": 1 },
+          "reason": { "type": "string" }
+        }
+      }
+    },
+    "electronVersion": { "$ref": "#/definitions/positiveInteger" },
+    "maxFiles": { "$ref": "#/definitions/positiveInteger" },
+    "maxFileBytes": { "$ref": "#/definitions/positiveInteger" },
+    "maxTotalBytes": { "$ref": "#/definitions/positiveInteger" }
+  }
+}
