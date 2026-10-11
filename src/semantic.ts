@@ -12,7 +12,7 @@ export async function createSemantic(discovery: Discovery): Promise<Semantic> {
     while (!checked.has(dir)) {
       checked.add(dir);
       try {
-        const raw = (await readJson(path.join(dir, 'tsconfig.json'))) as {
+        const raw = (await readJson(path.join(dir, 'tsconfig.json'), true)) as {
           compilerOptions?: { baseUrl?: unknown; paths?: unknown };
           extends?: unknown;
         };
@@ -167,7 +167,8 @@ export class Semantic {
       node = node.expression;
     return node;
   }
-  initializer(node: ts.Node): ts.Node | undefined {
+  initializer(node: ts.Node, depth = 0): ts.Node | undefined {
+    if (depth > 20) return undefined;
     const decl = this.declaration(node);
     if (
       decl &&
@@ -190,7 +191,7 @@ export class Semantic {
       decl.parent.parent.initializer &&
       ts.isObjectBindingPattern(decl.parent)
     ) {
-      const object = this.object(decl.parent.parent.initializer);
+      const object = this.object(decl.parent.parent.initializer, depth + 1);
       return object?.get((decl.propertyName ?? decl.name).getText());
     }
     return undefined;
@@ -236,14 +237,14 @@ export class Semantic {
           : undefined;
       if (item) return this.value(item, depth + 1);
     }
-    const init = this.initializer(node);
+    const init = this.initializer(node, depth + 1);
     return init && init !== node ? this.value(init, depth + 1) : undefined;
   }
   object(input: ts.Node, depth = 0): Map<string, ts.Node> | undefined {
     if (depth > 20) return undefined;
     const node = this.unwrap(input);
     if (!ts.isObjectLiteralExpression(node)) {
-      const init = this.initializer(node);
+      const init = this.initializer(node, depth + 1);
       return init && init !== node ? this.object(init, depth + 1) : undefined;
     }
     const result = new Map<string, ts.Node>();
@@ -328,7 +329,7 @@ export class Semantic {
       if (base && ts.isObjectBindingPattern(decl.parent))
         return `${base}.${(decl.propertyName ?? decl.name).getText()}`;
     }
-    const init = this.initializer(node);
+    const init = this.initializer(node, depth + 1);
     return init && init !== node ? this.origin(init, depth + 1) : undefined;
   }
   fn(input: ts.Node | undefined): ts.FunctionLikeDeclaration | undefined {

@@ -65,7 +65,17 @@ export function analyze(
     );
   };
   function bridge(input: ts.Node, seen = new Set<ts.Node>()): void {
-    if (seen.has(input) || seen.size > 200) return;
+    if (seen.has(input)) return;
+    if (seen.size > 200) {
+      emit(
+        'IPC008',
+        input,
+        'Bridge analysis size limit reached.',
+        'inconclusive',
+        'high',
+      );
+      return;
+    }
     seen.add(input);
     const origin = semantic.origin(input);
     if (
@@ -79,6 +89,11 @@ export function analyze(
         'potential',
         'high',
       );
+      return;
+    }
+    const unwrapped = semantic.unwrap(input);
+    if (ts.isArrayLiteralExpression(unwrapped)) {
+      for (const item of unwrapped.elements) bridge(item, seen);
       return;
     }
     const obj = semantic.object(input);
@@ -155,6 +170,17 @@ export function analyze(
     } else {
       const init = semantic.initializer(input);
       if (init) bridge(init, seen);
+      else if (
+        semantic.value(input) === undefined &&
+        input.kind !== ts.SyntaxKind.NullKeyword
+      )
+        emit(
+          'IPC008',
+          input,
+          'Exposed bridge value cannot be fully resolved.',
+          'inconclusive',
+          'high',
+        );
     }
   }
   function sensitive(
@@ -170,7 +196,7 @@ export function analyze(
       const origin = semantic.origin(node.expression);
       if (
         origin &&
-        (/^(?:fs|fs\/promises)\.(?:readFile|readFileSync|writeFile|writeFileSync|unlink|rm|rename|open|appendFile|mkdir|copyFile)$/.test(
+        (/^fs(?:\/promises|\.promises)?\.(?:readFile|readFileSync|writeFile|writeFileSync|unlink|rm|rename|open|appendFile|mkdir|copyFile)$/.test(
           origin,
         ) ||
           /^child_process\.(exec|execSync|execFile|execFileSync|spawn|spawnSync|fork)$/.test(
@@ -354,6 +380,16 @@ export function analyze(
     });
   }
   const main = endpoints.filter((e) => e.role === 'main');
+  const registrations = new Map<string, Endpoint[]>();
+  const dynamicMethods = new Set(
+    main.filter((e) => e.channel === null).map((e) => e.method),
+  );
+  for (const endpoint of main)
+    if (endpoint.channel !== null) {
+      const group = registrations.get(endpoint.channel) ?? [];
+      group.push(endpoint);
+      registrations.set(endpoint.channel, group);
+    }
   for (const caller of endpoints.filter(
     (e) =>
       e.role === 'renderer' &&
@@ -364,11 +400,9 @@ export function analyze(
       caller.method === 'invoke'
         ? ['handle', 'handleOnce']
         : ['on', 'once', 'addListener'];
-    const matches = main.filter((e) => e.channel === caller.channel);
+    const matches = registrations.get(caller.channel!) ?? [];
     if (!matches.some((e) => expected.includes(e.method))) {
-      const dynamic = main.some(
-        (e) => e.channel === null && expected.includes(e.method),
-      );
+      const dynamic = expected.some((method) => dynamicMethods.has(method));
       diagnostics.push(
         diagnostic(
           'IPC003',

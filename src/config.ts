@@ -1,7 +1,8 @@
 import { readFile, lstat } from 'node:fs/promises';
 import path from 'node:path';
+import ts from 'typescript';
 import { getRule, severities } from './rules.js';
-import type { Config } from './types.js';
+import type { Config, Severity } from './types.js';
 export const defaultExcludes = [
   '**/node_modules/**',
   '**/.git/**',
@@ -49,7 +50,11 @@ export function validateConfig(value: unknown): Config {
     if (!record(value.rules)) throw new Error('rules must be an object');
     for (const [id, setting] of Object.entries(value.rules)) {
       getRule(id);
-      if (setting !== 'off' && !severities.includes(setting as never))
+      if (
+        setting !== 'off' &&
+        (typeof setting !== 'string' ||
+          !severities.includes(setting as Severity))
+      )
         throw new Error(`Invalid severity for ${id}`);
     }
   }
@@ -85,13 +90,29 @@ export function validateConfig(value: unknown): Config {
   }
   return value as Config;
 }
-export async function readJson(file: string): Promise<unknown> {
+export async function readJson(
+  file: string,
+  allowComments = false,
+): Promise<unknown> {
   const stat = await lstat(file);
   if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 1024 * 1024)
     throw new Error(
       'JSON configuration must be a regular file of at most 1 MiB',
     );
-  return JSON.parse(await readFile(file, 'utf8')) as unknown;
+  const text = await readFile(file, 'utf8');
+  if (allowComments) {
+    const parsed = ts.parseConfigFileTextToJson(file, text);
+    if (parsed.error)
+      throw new Error(
+        'Invalid project JSON configuration; source values omitted',
+      );
+    return parsed.config as unknown;
+  }
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    throw new Error('Invalid JSON configuration; source values omitted');
+  }
 }
 export async function loadConfig(
   root: string,

@@ -21,7 +21,7 @@ export async function discover(
   const issues: Discovery['issues'] = [];
   const observations: string[] = [];
   const includes = picomatch(
-    config.include ?? ['**/*.{ts,tsx,js,jsx,mts,cts,mjs,cjs}'],
+    (config.include ?? ['**/*.{ts,tsx,js,jsx,mts,cts,mjs,cjs}']).map(slash),
     { dot: true },
   );
   const excludes = picomatch(
@@ -70,7 +70,12 @@ export async function discover(
         await walk(file);
         continue;
       }
-      if (!entry.isFile() || !includes(rel) || /\.d\.(?:ts|mts|cts)$/.test(rel))
+      if (
+        !entry.isFile() ||
+        !/\.(?:ts|tsx|js|jsx|mts|cts|mjs|cjs)$/i.test(rel) ||
+        !includes(rel) ||
+        /\.d\.(?:ts|mts|cts)$/.test(rel)
+      )
         continue;
       if (sources.size >= (config.maxFiles ?? 10000)) {
         issues.push({ file: rel, message: 'Source file count limit reached' });

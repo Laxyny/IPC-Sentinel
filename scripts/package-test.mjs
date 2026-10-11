@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtemp, writeFile, cp } from 'node:fs/promises';
+import { mkdtemp, writeFile, cp, access } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import assert from 'node:assert/strict';
@@ -64,8 +64,6 @@ for (const [fixture, status] of [
         : report.version === '2.1.0',
     );
   }
-const esm = npm; // Keep all subprocess calls argument-based; no shell interpolation.
-assert(esm);
 execFileSync(
   process.execPath,
   [
@@ -89,14 +87,11 @@ const shim = path.join(
   '.bin',
   process.platform === 'win32' ? 'ipc-sentinel.cmd' : 'ipc-sentinel',
 );
-const shimResult =
-  process.platform === 'win32'
-    ? spawnSync('cmd.exe', ['/d', '/s', '/c', `"${shim}" --version`], {
-        encoding: 'utf8',
-      })
-    : spawnSync(shim, ['--version'], { encoding: 'utf8' });
-assert.equal(shimResult.status, 0, shimResult.stderr);
-assert.equal(shimResult.stdout.trim(), '0.1.0');
+await access(shim);
+assert.equal(
+  npm(['exec', '--offline', '--', 'ipc-sentinel', '--version'], temp).trim(),
+  '0.1.0',
+);
 const dry = JSON.parse(
   npm([
     'publish',

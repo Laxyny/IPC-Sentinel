@@ -3,7 +3,7 @@ import ts from 'typescript';
 import picomatch from 'picomatch';
 import { loadConfig } from './config.js';
 import { discover, slash } from './discovery.js';
-import { createSemantic } from './semantic.js';
+import { createSemantic, visit } from './semantic.js';
 import { analyze, diagnostic } from './analysis.js';
 import type { ScanOptions, ScanReport } from './types.js';
 export type * from './types.js';
@@ -69,31 +69,31 @@ export async function scanProject(
   >();
   for (const file of semantic.program.getSourceFiles()) {
     const directives: { line: number; id: string; reason: string }[] = [];
-    const scanner = ts.createScanner(
-      ts.ScriptTarget.Latest,
-      false,
-      ts.LanguageVariant.Standard,
-      file.text,
-    );
-    let token = scanner.scan();
-    while (token !== ts.SyntaxKind.EndOfFileToken) {
-      if (token === ts.SyntaxKind.SingleLineCommentTrivia) {
-        const match = scanner
-          .getTokenText()
+    const seenComments = new Set<number>();
+    visit(file, (node) => {
+      for (const range of ts.getLeadingCommentRanges(
+        file.text,
+        node.getFullStart(),
+      ) ?? []) {
+        if (
+          range.kind !== ts.SyntaxKind.SingleLineCommentTrivia ||
+          seenComments.has(range.pos)
+        )
+          continue;
+        seenComments.add(range.pos);
+        const match = file.text
+          .slice(range.pos, range.end)
           .match(
             /^\/\/\s*ipc-sentinel-disable-next-line\s+(IPC\d{3})(?:\s+--\s*(.*))?\s*$/,
           );
         if (match)
           directives.push({
-            line:
-              file.getLineAndCharacterOfPosition(scanner.getTokenPos()).line +
-              2,
+            line: file.getLineAndCharacterOfPosition(range.pos).line + 2,
             id: match[1]!,
             reason: match[2]?.trim() || 'No reason supplied',
           });
       }
-      token = scanner.scan();
-    }
+    });
     inline.set(slash(path.relative(discovery.root, file.fileName)), directives);
   }
   const seen = new Set<string>();

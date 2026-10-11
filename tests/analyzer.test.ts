@@ -151,6 +151,56 @@ describe('configuration, suppression and discovery', () => {
     );
     expect(report.suppressed).toEqual([]);
   });
+  it('does not recognize template text as suppression comments', async () => {
+    const report = await scan(
+      "import {ipcRenderer} from 'electron'; const text = `${1}\n// ipc-sentinel-disable-next-line IPC003\n${ipcRenderer.invoke('missing')}`;",
+    );
+    expect(report.suppressed).toEqual([]);
+    expect(report.diagnostics.some((d) => d.ruleId === 'IPC003')).toBe(true);
+  });
+  it('bounds circular destructured initializers', async () => {
+    const report = await scan(
+      "import {ipcRenderer} from 'electron'; const {x} = x; ipcRenderer.invoke(x);",
+    );
+    expect(report.diagnostics.some((d) => d.ruleId === 'IPC007')).toBe(true);
+  });
+  it('marks opaque bridge factories incomplete and detects bound methods', async () => {
+    const report = await scan(
+      "import {contextBridge,ipcRenderer} from 'electron'; contextBridge.exposeInMainWorld('a', factory()); contextBridge.exposeInMainWorld('b',{send: ipcRenderer.send.bind(ipcRenderer)});",
+    );
+    expect(report.complete).toBe(false);
+    expect(report.diagnostics.some((d) => d.ruleId === 'IPC001')).toBe(true);
+  });
+  it('supports Windows include patterns and total/file count bounds', async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), 'ipc-sentinel-limits-'));
+    await mkdir(path.join(root, 'src'));
+    for (const file of ['a.js', 'b.js'])
+      await writeFile(path.join(root, 'src', file), 'const x=1;');
+    const report = await scanProject({
+      root,
+      config: { include: ['src\\*.js'], maxFiles: 1 },
+    });
+    expect(report.files).toHaveLength(1);
+    expect(report.complete).toBe(false);
+    const total = await scanProject({ root, config: { maxTotalBytes: 1 } });
+    expect(total.complete).toBe(false);
+  });
+  it('reads tsconfig JSON comments and rejects malformed JSON without leaking values', async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), 'ipc-sentinel-jsonc-'));
+    await writeFile(path.join(root, 'app.ts'), 'const x=1;');
+    await writeFile(
+      path.join(root, 'tsconfig.json'),
+      '{/* local settings */ "compilerOptions": {},}',
+    );
+    expect((await scanProject({ root })).complete).toBe(true);
+    await writeFile(
+      path.join(root, 'ipc-sentinel.config.json'),
+      '{"secret":"sensitive-value" broken}',
+    );
+    await expect(scanProject({ root })).rejects.toThrow(
+      'source values omitted',
+    );
+  });
   it('keeps incomplete state even when incompleteness diagnostics are disabled', async () => {
     const report = await scan('const = ;', { rules: { IPC008: 'off' } });
     expect(report.complete).toBe(false);
@@ -165,9 +215,10 @@ describe('configuration, suppression and discovery', () => {
       path.join(root, 'src', 'app.js'),
       "throw new Error('source was executed');",
     );
+    await writeFile(path.join(root, 'src', 'data.json'), '{"notSource":true}');
     const report = await scanProject({
       root,
-      config: { include: ['src/**/*.js'] },
+      config: { include: ['src/**/*'] },
     });
     expect(report.files).toEqual(['src/app.js']);
     expect(report.complete).toBe(true);
