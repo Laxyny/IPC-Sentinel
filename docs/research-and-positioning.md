@@ -2,14 +2,14 @@
 
 Research date: 12 October 2026. These are source-level capabilities, not guarantees of exploitability.
 
-| Tool | Existing capability | IPC Sentinel's practical distinction |
-| --- | --- | --- |
-| [Electronegativity](https://github.com/doyensec/electronegativity) | AST and DOM checks for Electron security anti-patterns | Typed public API, auditable suppressions, cross-file channel graph without application migration |
-| [eslint-plugin-security](https://github.com/eslint-community/eslint-plugin-security) | General Node.js suspicious patterns | Electron import provenance and invoke/handle versus send/on relationships |
-| [eslint-plugin-electron-security](https://github.com/biw/eslint-plugin-electron-security) | Electron-specific ESLint rules including sender validation | Whole discovered-project relationship analysis; complements file-level linting |
-| [electron-trpc](https://github.com/jsonnull/electron-trpc) | Type-safe IPC through a runtime framework | Analyze existing Electron APIs without adopting a transport framework |
-| [MarshallOfSound/ipc](https://github.com/MarshallOfSound/ipc) | IPC framework with contracts and runtime validation | Findings and channel relationships for existing applications |
-| TypeScript compiler | Symbol resolution and type checking | Security and IPC semantics layered on compiler infrastructure |
+| Tool                                                                                      | Existing capability                                        | IPC Sentinel's practical distinction                                                             |
+| ----------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| [Electronegativity](https://github.com/doyensec/electronegativity)                        | AST and DOM checks for Electron security anti-patterns     | Typed public API, auditable suppressions, cross-file channel graph without application migration |
+| [eslint-plugin-security](https://github.com/eslint-community/eslint-plugin-security)      | General Node.js suspicious patterns                        | Electron import provenance and invoke/handle versus send/on relationships                        |
+| [eslint-plugin-electron-security](https://github.com/biw/eslint-plugin-electron-security) | Electron-specific ESLint rules including sender validation | Whole discovered-project relationship analysis; complements file-level linting                   |
+| [electron-trpc](https://github.com/jsonnull/electron-trpc)                                | Type-safe IPC through a runtime framework                  | Analyze existing Electron APIs without adopting a transport framework                            |
+| [MarshallOfSound/ipc](https://github.com/MarshallOfSound/ipc)                             | IPC framework with contracts and runtime validation        | Findings and channel relationships for existing applications                                     |
+| TypeScript compiler                                                                       | Symbol resolution and type checking                        | Security and IPC semantics layered on compiler infrastructure                                    |
 
 The official [security checklist](https://www.electronjs.org/docs/latest/tutorial/security), [ipcMain](https://www.electronjs.org/docs/latest/api/ipc-main), [ipcRenderer](https://www.electronjs.org/docs/latest/api/ipc-renderer), and [contextBridge](https://www.electronjs.org/docs/latest/api/context-bridge) documentation guide rule design. Review findings for sensitive handlers remain potential risks: lack of visible validation does not establish exploitation. Electron 29 prevents transfer of the entire ipcRenderer object, but individual raw methods and forwarding callbacks still merit review. Duplicate on listeners are legal; duplicate handle registrations are a different concern. Conditional registrations and separately built main processes require interpretation.
 
