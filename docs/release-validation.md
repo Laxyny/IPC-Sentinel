@@ -22,11 +22,12 @@ npm audit --audit-level=moderate
 npm run benchmark
 npm run benchmark -- 5000
 npm pack --json
+npm publish --dry-run --json --access public
 ```
 
 `validate` ran formatting checks, ESLint, strict TypeScript checks, all tests, the production build and packed consumer checks. All passed. There are 33 tests across three suites. Core coverage (CLI tested through subprocess integration and excluded from instrumentation): 90.32% statements, 85.51% branches, 90.24% functions and 93.30% lines. Audit reported zero vulnerabilities across production and development dependencies at the time of validation.
 
-The real tarball was installed into an empty temporary consumer. ESM imports, CommonJS require, installed CLI shim, secure and unsafe Electron project fixtures, JSON, SARIF and `npm publish --dry-run --json --ignore-scripts --access public` all passed. SARIF was additionally validated offline against the vendored external SARIF 2.1.0 schema; the configuration editor schema is checked against runtime acceptance. `npm pack --json` also exercised the actual prepack build hook.
+The real tarball was installed into an empty temporary consumer. ESM imports, CommonJS require, installed CLI shim, secure and unsafe Electron project fixtures, JSON, SARIF and `npm publish --dry-run --json --ignore-scripts --access public` all passed. SARIF was additionally validated offline against the vendored external SARIF 2.1.0 schema; the configuration editor schema is checked against runtime acceptance. Direct `npm pack --json` and `npm publish --dry-run --json --access public` also exercised the actual prepack build hook. npm's repository URL normalization warning was resolved in package metadata. Its dry-run authentication notice is expected; actual publication remains unapproved and npm authentication has not been verified.
 
 The package contents whitelist was checked: compiled code, declarations, source maps with embedded project source, documentation, schema and public metadata only. No tests, external test schema, dependency tree, credentials, private attachments or temporary consumer files are included. The package is approximately 54 KiB before this validation document was added; final size depends on documentation changes and must be read from the final tarball rather than inferred here.
 

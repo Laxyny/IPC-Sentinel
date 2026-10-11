@@ -7,7 +7,7 @@
   "author": "IPC Sentinel contributors",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Laxyny/IPC-Sentinel.git"
+    "url": "git+https://github.com/Laxyny/IPC-Sentinel.git"
   },
   "bugs": {
     "url": "https://github.com/Laxyny/IPC-Sentinel/issues"
