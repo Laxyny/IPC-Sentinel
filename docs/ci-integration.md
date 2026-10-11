@@ -43,7 +43,7 @@ This is a workflow fragment: put steps in a job and install IPC Sentinel in the 
 
 The repository workflow runs formatting, ESLint, strict TypeScript checks, unit/CLI tests, build, packed installation, exports and publication dry-run on Node 22/24 across Ubuntu, Windows and macOS. Coverage and npm audit also run. Actions are pinned to verified commit SHAs; Dependabot proposes updates. Pull requests get read-only repository access and no publication credentials. There is no pull_request_target execution.
 
-Remote CI has not been claimed successful until actual workflow runs complete. Local Windows validation is recorded separately in docs/release-validation.md.
+The initial six-job remote matrix passed on the implementation revision recorded in docs/release-validation.md. That record also distinguishes the clean local Windows validation and subsequent documentation revisions. Check the exact release commit's workflow before publication.
 
 ## Publication approval and setup
 

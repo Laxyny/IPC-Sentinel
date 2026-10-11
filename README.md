@@ -49,7 +49,7 @@ contextBridge.exposeInMainWorld('app', { send: ipcRenderer.send });
 Text output includes:
 
 ```text
-preload.ts:2:46 [HIGH] IPC001 Raw IPC capability is exposed through contextBridge.
+preload.ts:2:48 [HIGH] IPC001 Raw IPC capability is exposed through contextBridge.
   Expose one method per allowed operation; fix channel names and strip the event argument from callbacks.
 ```
 
