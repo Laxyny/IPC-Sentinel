@@ -30,6 +30,8 @@ Version 0.1.0 is the initial release, with documented rule limits and conservati
 
 ## Capabilities
 
+**Development preview:** the unreleased branch adds simple wrapper expansion, enum/local CommonJS constants and optional application graphs. See the [public-project validation report](docs/real-world-validation.md) for measured results and limits. These additions are not in npm 0.1.0.
+
 - Distinguishes `invoke/handle` from `send/on`, including common one-shot variants.
 - Finds undiscovered handlers, duplicate invoke registration sites, dynamic channels, and method mismatches.
 - Reviews raw IPC bridge exposure, parameter-selected channels, and callbacks that forward Electron event objects.
@@ -172,11 +174,14 @@ No source evaluation, project scripts, config imports, telemetry, account or net
 
 This is a static review tool, not proof of application security. Finding kinds separate `static` source facts, `potential` risks, `inconclusive` analysis, and informational observations. Confidence describes the evidence for that finding, not exploitability. `complete` means no detected parse/configuration/resource failure within the documented scope, not coverage of every runtime behavior. Dynamic channels remain inconclusive even in a complete scan.
 
-There is no complete control-flow, taint or contract compatibility analysis. No parameter-selected-channel allowlist proof, request/response type comparison, wrapper call-site instantiation, independent-window reachability or runtime registration-order model. IPC002 intentionally asks for review even when a helper validates requests; names or a call to `validate` do not prove all paths are guarded. Local helpers are followed to depth three; imported runtime libraries are not inspected. Navigation policies, permission handlers, preload path resolution, CSP, fuses and remote-code trust are not comprehensively audited. External HTTPS constants are not a general guarantee of safe destinations. Const object evaluation assumes no later mutation. CommonJS channel-module exports and tsconfig inheritance are not resolved. No autofix is offered because security boundary changes require application-specific decisions.
+There is no complete control-flow, taint or contract compatibility analysis. No parameter-selected-channel allowlist proof, request/response type comparison, general wrapper expansion, independent-window reachability or runtime registration-order model. IPC002 intentionally asks for review even when a helper validates requests; names or a call to `validate` do not prove all paths are guarded. Local helpers are followed to depth three; imported runtime libraries are not inspected. Navigation policies, permission handlers, preload path resolution, CSP, fuses and remote-code trust are not comprehensively audited. External HTTPS constants are not a general guarantee of safe destinations. Const object evaluation assumes no later mutation. The development branch recognizes bounded local CommonJS exports; conditional exports, external packages and tsconfig inheritance remain unresolved. No autofix is offered because security boundary changes require application-specific decisions.
 
 Source discovery skips symlinks, dependencies and generated outputs, limits file/byte counts, and sanitizes terminal control characters. These are defensive safeguards, not isolation against a concurrently mutating hostile filesystem. [Architecture](docs/architecture.md) and [research](docs/research-and-positioning.md) explain the tradeoffs.
 
 ## Documentation
+
+- [Real-world validation](docs/real-world-validation.md): pinned projects, reviewed findings, regressions and performance.
+- [Dependabot audit](docs/dependabot-audit.md): compatibility checks and decisions for every dependency PR.
 
 | Guide                                                        | What you will find                                                               |
 | :----------------------------------------------------------- | :------------------------------------------------------------------------------- |
@@ -200,4 +205,4 @@ The lockfile pins dependencies. Tests cover secure/unsafe project fixtures, fals
 
 See [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), [SECURITY.md](SECURITY.md), and [CHANGELOG.md](CHANGELOG.md). Licensed under [MIT](LICENSE).
 
-Priorities for 0.2.0: app-scoped graphs, wrapper models, explicit validator contracts, and richer navigation/bridge dataflow analysis. Later releases can add serialization-aware contract checks, safe editor integration and packaged fuse audits, each with false-positive regression fixtures.
+The development branch implements explicit app scopes and simple wrapper models. Future priorities include explicit validator contracts and richer navigation/bridge dataflow analysis. Later releases can add serialization-aware contract checks, safe editor integration and packaged fuse audits, each with false-positive regression fixtures.

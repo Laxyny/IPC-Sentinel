@@ -30,3 +30,18 @@ Suppressions are retained even for `off` rules. A configuration suppression appl
 `complete` is determined before suppressions. Lowering or disabling IPC008 does not change CLI exit 2. Partial results remain available in machine output. Fatal root/config errors print a sanitized stderr message; they do not produce a report.
 
 Tsconfig alias support reads nearest project-local JSON/JSONC `compilerOptions.baseUrl` and `paths` (comments and trailing commas are accepted there). Relative imports and local re-exports work. Package exports, references, inherited tsconfigs and runtime bundler aliases are not interpreted. Static configuration is never proof of the delivered Electron version or runtime defaults.
+
+## Development: independent application graphs
+
+The unreleased branch accepts applicationRoots, an array of 1�100 non-overlapping root-relative directory paths. This option is not available in npm 0.1.0.
+
+```json
+{
+  "applicationRoots": ["apps/desktop", "apps/admin"],
+  "include": ["apps/**/*.ts", "shared/**/*.ts"]
+}
+```
+
+Paths normalize backslashes, reject absolute paths, traversal, globs and duplicates (case-insensitive), and are bounded to 512 characters. Windows membership is case-insensitive. Each root forms an independent channel graph; windows and multiple preloads inside one app still share a graph. Endpoints carry an optional scope. Files outside roots remain unassigned and cannot satisfy app requests. A declared root with no selected files produces IPC008. Shared wrapper calls inherit caller scope.
+
+Select production sources and the relevant platform with include/exclude; tests and alternative build targets can contain legitimate duplicate registration sites. Development also excludes .yarn directories by default. Runtime validation enforces path constraints in addition to the editor schema. No build scripts run and build target membership is not inferred.

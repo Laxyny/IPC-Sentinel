@@ -1,5 +1,7 @@
 # 0.1.0 release candidate validation
 
+This is a historical record. Publication was subsequently completed on 12 October 2026; npm 0.1.0 remains the published version. See [real-world validation](real-world-validation.md) for unreleased hardening. Account-side OIDC publisher and protected-environment configuration remain unverified. This mission does not invoke publication.
+
 Validation date: 12 October 2026 (Europe/Paris). This document records checks before first publication. Package identity: `ipc-sentinel@0.1.0`, MIT. Initial registry lookup returned E404; name availability and publisher ownership were unconfirmed at that stage.
 
 ## Product scope

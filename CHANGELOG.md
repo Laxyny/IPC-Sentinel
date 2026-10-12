@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- Resolve enum channels, bounded local CommonJS exports and simple forwarded IPC wrappers at caller locations.
+- Add optional applicationRoots and endpoint scope to isolate independent application graphs.
+- Detect parameter-selected channels through aliases and event forwarding through spreads and shorthand objects.
+- Accept fixed-channel bound request methods; distinguish listener cleanup from request exposure.
+- Skip uncalled nested helpers in privileged-handler review and follow bounded BrowserWindow aliases.
+- Exclude bundled Yarn sources, add pinned public-source regressions and paired performance measurements.
+- Upgrade Vitest and its coverage provider together; group future testing updates in Dependabot.
+
+These changes are development-only. The published package remains 0.1.0. The additive configuration/API and changed findings warrant a future minor release, potentially 0.2.0, after review and explicit publication approval.
+
 ## 0.1.0 - 2026-10-12
 
 - Initial local-first TypeScript/JavaScript Electron analyzer and typed API.
