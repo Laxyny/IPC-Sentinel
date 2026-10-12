@@ -1,7 +1,9 @@
 import ts from 'typescript';
 import path from 'node:path';
 import { slash } from './discovery.js';
+import { withinScope } from './paths.js';
 import { Semantic, visit } from './semantic.js';
+import { resolveIpcCall } from './wrappers.js';
 import { getRule } from './rules.js';
 import type {
   Config,
@@ -53,6 +55,18 @@ export function analyze(
 ): { diagnostics: Diagnostic[]; endpoints: Endpoint[] } {
   const diagnostics: Diagnostic[] = [];
   const endpoints: Endpoint[] = [];
+  const calls = new Map<ts.CallExpression, ReturnType<typeof resolveIpcCall>>();
+  const instantiatedTemplates = new Set<ts.CallExpression>();
+  for (const file of semantic.program.getSourceFiles())
+    visit(file, (node) => {
+      if (!ts.isCallExpression(node)) return;
+      const resolved = resolveIpcCall(semantic, node);
+      calls.set(node, resolved);
+      // A static caller supplies evidence missing from the generic definition.
+      if (resolved && typeof semantic.value(resolved.args[0]) === 'string')
+        for (const template of resolved.templates)
+          instantiatedTemplates.add(template);
+    });
   const emit = (
     id: string,
     node: ts.Node,
@@ -78,6 +92,17 @@ export function analyze(
     }
     seen.add(input);
     const origin = semantic.origin(input);
+    const bound = semantic.unwrap(semantic.initializer(input) ?? input);
+    if (
+      ts.isCallExpression(bound) &&
+      ts.isPropertyAccessExpression(bound.expression) &&
+      bound.expression.name.text === 'bind' &&
+      /^electron\.ipcRenderer\.(invoke|send|sendSync)$/.test(origin ?? '') &&
+      bound.arguments[0] &&
+      semantic.origin(bound.arguments[0]) === 'electron.ipcRenderer' &&
+      typeof semantic.value(bound.arguments[1]) === 'string'
+    )
+      return;
     if (
       origin === 'electron.ipcRenderer' ||
       origin?.startsWith('electron.ipcRenderer.')
@@ -105,19 +130,18 @@ export function analyze(
     if (fn?.body) {
       visit(fn.body, (node) => {
         if (!ts.isCallExpression(node)) return;
-        const method = semantic.origin(node.expression);
+        const resolved = calls.get(node);
+        const method = resolved?.origin ?? semantic.origin(node.expression);
+        const args = resolved?.args ?? node.arguments;
         if (!method?.startsWith('electron.ipcRenderer.')) return;
-        if (
-          typeof semantic.value(node.arguments[0]) !== 'string' &&
-          node.arguments[0]
-        ) {
+        if (typeof semantic.value(args[0]) !== 'string' && args[0]) {
           const parameters = new Set(
             fn.parameters
               .map((p) => semantic.checker.getSymbolAtLocation(p.name))
               .filter(Boolean),
           );
           let forwarded = false;
-          visit(node.arguments[0], (part) => {
+          visit(args[0], (part) => {
             const symbol = semantic.checker.getSymbolAtLocation(part);
             if (symbol && parameters.has(symbol)) forwarded = true;
           });
@@ -132,9 +156,10 @@ export function analyze(
         }
         if (
           method === 'electron.ipcRenderer.on' ||
-          method === 'electron.ipcRenderer.once'
+          method === 'electron.ipcRenderer.once' ||
+          method === 'electron.ipcRenderer.addListener'
         ) {
-          const callback = node.arguments[1];
+          const callback = args[1];
           if (callback && !semantic.fn(callback))
             emit(
               'IPC001',
@@ -150,11 +175,21 @@ export function analyze(
             visit(listener.body, (part) => {
               if (
                 ts.isCallExpression(part) &&
-                part.arguments.some(
-                  (arg) =>
-                    ts.isIdentifier(arg) &&
-                    semantic.checker.getSymbolAtLocation(arg) === eventSymbol,
-                )
+                part.arguments.some((arg) => {
+                  let containsEvent = false;
+                  visit(arg, (value) => {
+                    const symbol =
+                      ts.isIdentifier(value) &&
+                      ts.isShorthandPropertyAssignment(value.parent)
+                        ? semantic.checker.getShorthandAssignmentValueSymbol(
+                            value.parent,
+                          )
+                        : semantic.checker.getSymbolAtLocation(value);
+                    if (ts.isIdentifier(value) && symbol === eventSymbol)
+                      containsEvent = true;
+                  });
+                  return containsEvent;
+                })
               )
                 emit(
                   'IPC001',
@@ -191,7 +226,10 @@ export function analyze(
     if (!fn.body || depth > 3 || seen.has(fn)) return false;
     seen.add(fn);
     let result = false;
-    visit(fn.body, (node) => {
+    const inspect = (node: ts.Node): void => {
+      // A nested function's declaration does not prove it executes in a handler.
+      if (ts.isFunctionLike(node)) return;
+      ts.forEachChild(node, inspect);
       if (!ts.isCallExpression(node)) return;
       const origin = semantic.origin(node.expression);
       if (
@@ -207,7 +245,8 @@ export function analyze(
         result = true;
       const helper = semantic.fn(node.expression);
       if (helper && sensitive(helper, depth + 1, seen)) result = true;
-    });
+    };
+    inspect(fn.body);
     return result;
   }
   for (const file of semantic.program.getSourceFiles()) {
@@ -286,10 +325,11 @@ export function analyze(
       }
       if (!ts.isCallExpression(node)) return;
       const origin = semantic.origin(node.expression);
-      const match = origin?.match(
+      const resolved = calls.get(node);
+      const match = (resolved?.origin ?? origin)?.match(
         /^electron\.(ipcMain|ipcRenderer)\.(handle|handleOnce|on|once|addListener|invoke|send|sendSync)$/,
       );
-      if (match) {
+      if (match && !instantiatedTemplates.has(node)) {
         const role = match[1] === 'ipcMain' ? 'main' : 'renderer';
         const method = match[2]!;
         if (
@@ -307,13 +347,25 @@ export function analyze(
               'addListener',
             ].includes(method))
         ) {
-          const value = semantic.value(node.arguments[0]);
+          const args = resolved?.args ?? node.arguments;
+          const value = semantic.value(args[0]);
           const channel = typeof value === 'string' ? value : null;
           endpoints.push({
             role,
             method,
             channel,
             location: location(root, node),
+            ...(config.applicationRoots
+              ? {
+                  scope:
+                    config.applicationRoots.map(slash).find((scope) => {
+                      const file = slash(
+                        path.relative(root, node.getSourceFile().fileName),
+                      );
+                      return withinScope(file, scope);
+                    }) ?? '<unassigned>',
+                }
+              : {}),
           });
           if (channel === null)
             emit(
@@ -324,7 +376,7 @@ export function analyze(
               'high',
             );
           if (role === 'main') {
-            const fn = semantic.fn(node.arguments[1]);
+            const fn = semantic.fn(args[1]);
             if (fn && sensitive(fn))
               emit(
                 'IPC002',
@@ -380,15 +432,17 @@ export function analyze(
     });
   }
   const main = endpoints.filter((e) => e.role === 'main');
+  const key = (e: Endpoint, value: string): string =>
+    JSON.stringify([e.scope ?? '.', value]);
   const registrations = new Map<string, Endpoint[]>();
   const dynamicMethods = new Set(
-    main.filter((e) => e.channel === null).map((e) => e.method),
+    main.filter((e) => e.channel === null).map((e) => key(e, e.method)),
   );
   for (const endpoint of main)
     if (endpoint.channel !== null) {
-      const group = registrations.get(endpoint.channel) ?? [];
+      const group = registrations.get(key(endpoint, endpoint.channel)) ?? [];
       group.push(endpoint);
-      registrations.set(endpoint.channel, group);
+      registrations.set(key(endpoint, endpoint.channel), group);
     }
   for (const caller of endpoints.filter(
     (e) =>
@@ -400,16 +454,23 @@ export function analyze(
       caller.method === 'invoke'
         ? ['handle', 'handleOnce']
         : ['on', 'once', 'addListener'];
-    const matches = registrations.get(caller.channel!) ?? [];
+    const unassigned = caller.scope === '<unassigned>';
+    const matches = unassigned
+      ? []
+      : (registrations.get(key(caller, caller.channel!)) ?? []);
     if (!matches.some((e) => expected.includes(e.method))) {
-      const dynamic = expected.some((method) => dynamicMethods.has(method));
+      const dynamic =
+        unassigned ||
+        expected.some((method) => dynamicMethods.has(key(caller, method)));
       diagnostics.push(
         diagnostic(
           'IPC003',
           caller.location,
-          dynamic
-            ? 'No static matching handler was discovered; dynamic registrations may handle this call.'
-            : `No matching ${expected.join('/')} registration was discovered for this ${caller.method} call.`,
+          unassigned
+            ? 'Caller is outside configured application roots; its relationship cannot be assigned.'
+            : dynamic
+              ? 'No static matching handler was discovered; dynamic registrations may handle this call.'
+              : `No matching ${expected.join('/')} registration was discovered for this ${caller.method} call.`,
           'inconclusive',
           dynamic ? 'low' : 'medium',
           matches.map((e) => e.location),
@@ -419,11 +480,14 @@ export function analyze(
   }
   const groups = new Map<string, Endpoint[]>();
   for (const endpoint of main.filter(
-    (e) => ['handle', 'handleOnce'].includes(e.method) && e.channel !== null,
+    (e) =>
+      ['handle', 'handleOnce'].includes(e.method) &&
+      e.channel !== null &&
+      e.scope !== '<unassigned>',
   )) {
-    const group = groups.get(endpoint.channel!) ?? [];
+    const group = groups.get(key(endpoint, endpoint.channel!)) ?? [];
     group.push(endpoint);
-    groups.set(endpoint.channel!, group);
+    groups.set(key(endpoint, endpoint.channel!), group);
   }
   for (const group of groups.values())
     if (group.length > 1)

@@ -3,7 +3,8 @@ import path from 'node:path';
 import picomatch from 'picomatch';
 import { defaultExcludes } from './config.js';
 import type { Config } from './types.js';
-export const slash = (value: string): string => value.replaceAll('\\', '/');
+import { slash } from './paths.js';
+export { slash } from './paths.js';
 export interface Discovery {
   root: string;
   sources: Map<string, string>;

@@ -73,14 +73,12 @@ describe('conservative AST analysis', () => {
     );
     expect(report.diagnostics).toEqual([]);
   });
-  it('exposes wrappers as dynamic without pretending to instantiate their call sites', async () => {
+  it('matches channels supplied to simple registration wrappers', async () => {
     const report = await scan(
       "import {ipcMain, ipcRenderer} from 'electron'; function register(c, fn){ipcMain.handle(c,fn)} register('x',()=>1); ipcRenderer.invoke('x');",
     );
-    expect(
-      report.diagnostics.find((d) => d.ruleId === 'IPC003')?.confidence,
-    ).toBe('low');
-    expect(report.diagnostics.some((d) => d.ruleId === 'IPC007')).toBe(true);
+    expect(report.diagnostics).toEqual([]);
+    expect(report.endpoints.map((e) => e.channel)).toEqual(['x', 'x']);
   });
   it('does not flag omitted modern preferences as unsafe', async () => {
     const report = await scan(
