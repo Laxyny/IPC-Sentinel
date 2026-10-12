@@ -36,6 +36,7 @@ export interface RuleDefinition {
   documentationUrl: string;
 }
 export interface Config {
+  applicationRoots?: string[];
   include?: string[];
   exclude?: string[];
   rules?: Record<string, 'off' | Severity>;
@@ -51,6 +52,7 @@ export interface ScanOptions {
   config?: Config;
 }
 export interface Endpoint {
+  scope?: string;
   role: 'main' | 'renderer';
   method: string;
   channel: string | null;

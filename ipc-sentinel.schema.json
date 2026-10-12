@@ -39,6 +39,13 @@
     }
   },
   "properties": {
+    "applicationRoots": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1, "maxLength": 512 }
+    },
     "include": { "$ref": "#/definitions/patterns" },
     "exclude": { "$ref": "#/definitions/patterns" },
     "rules": {

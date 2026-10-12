@@ -4,6 +4,15 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    groups:
+      vitest:
+        patterns:
+          - vitest
+          - '@vitest/*'
+    ignore:
+      # Match the oldest supported runtime API; permit maintenance on Node 22 types.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
   - package-ecosystem: github-actions
     directory: /
     schedule:

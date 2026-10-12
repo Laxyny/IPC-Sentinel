@@ -10,12 +10,21 @@ const projects = JSON.parse(
 );
 const cache = path.join(os.tmpdir(), 'ipc-sentinel-public-validation');
 const fetchSources = process.argv.includes('--fetch');
+const check = process.argv.includes('--check');
+const selection = process.argv.indexOf('--project');
+const selectedName = selection >= 0 ? process.argv[selection + 1] : undefined;
+if (
+  selection >= 0 &&
+  !projects.some((project) => project.name === selectedName)
+)
+  throw new Error('Unknown pinned project');
 const implementation =
   process.env.IPC_SENTINEL_IMPLEMENTATION ??
   path.join(workspace, 'dist/index.js');
 const results = [];
 await mkdir(cache, { recursive: true });
 for (const project of projects) {
+  if (selectedName && project.name !== selectedName) continue;
   if (
     !/^[a-z0-9-]+$/.test(project.name) ||
     !/^[a-f0-9]{40}$/.test(project.commit) ||
@@ -75,6 +84,20 @@ for (const project of projects) {
       pkg.devDependencies?.electron ?? pkg.dependencies?.electron ?? null,
     ...result,
   });
+  if (check) {
+    const expected = JSON.parse(
+      await readFile(path.join(workspace, 'validation/expected.json'), 'utf8'),
+    )[project.name];
+    for (const key of [
+      'files',
+      'endpoints',
+      'findings',
+      'inconclusive',
+      'complete',
+    ])
+      if (JSON.stringify(result[key]) !== JSON.stringify(expected[key]))
+        throw new Error(`Real-world regression for ${project.name}: ${key}`);
+  }
   console.error(
     `Analyzed ${project.name}: ${result.files} files, ${result.endpoints} endpoints`,
   );

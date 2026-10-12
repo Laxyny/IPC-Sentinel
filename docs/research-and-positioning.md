@@ -23,6 +23,8 @@ Only two production dependencies: TypeScript and picomatch. No application runti
 
 ## Registry identity
 
+The following lookup was the initial pre-publication assessment. The approved first publication subsequently succeeded: ipc-sentinel 0.1.0 is the package identity. The unreleased work preserves that version and does not publish. Current development adds explicit directory app scopes and simple forwarded wrappers; it still does not infer entry-point reachability or validation correctness. See [real-world validation](real-world-validation.md) and [dependency audit](dependabot-audit.md) for current evidence.
+
 `npm view ipc-sentinel name version --json` returned registry E404 on 12 October 2026. Select `ipc-sentinel` provisionally; E404 does not reserve a name, prove publish eligibility, or establish ownership. Recheck availability and authenticated ownership immediately before the approved first publication. If unavailable, investigate `@laxyny/ipc-sentinel` only after verifying that scope ownership. Do not change branding to resemble competing projects.
 
 Publishing uses [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/) with provenance, an explicitly dispatched release workflow, and a protected GitHub environment. Environment approval and npm trusted publisher configuration require repository owner setup; source files cannot enforce that external state.

@@ -1,11 +1,13 @@
 import { readFile, lstat } from 'node:fs/promises';
 import path from 'node:path';
 import ts from 'typescript';
+import { slash } from './paths.js';
 import { getRule, severities } from './rules.js';
 import type { Config, Severity } from './types.js';
 export const defaultExcludes = [
   '**/node_modules/**',
   '**/.git/**',
+  '**/.yarn/**',
   '**/dist/**',
   '**/build/**',
   '**/coverage/**',
@@ -17,6 +19,7 @@ function record(value: unknown): value is Record<string, unknown> {
 export function validateConfig(value: unknown): Config {
   if (!record(value)) throw new Error('Configuration must be a JSON object');
   const allowed = [
+    'applicationRoots',
     'include',
     'exclude',
     'rules',
@@ -29,6 +32,39 @@ export function validateConfig(value: unknown): Config {
   for (const key of Object.keys(value))
     if (!allowed.includes(key))
       throw new Error(`Unknown configuration property: ${key}`);
+  if (value.applicationRoots !== undefined) {
+    if (
+      !Array.isArray(value.applicationRoots) ||
+      value.applicationRoots.length === 0 ||
+      value.applicationRoots.length > 100 ||
+      !value.applicationRoots.every(
+        (root) =>
+          typeof root === 'string' &&
+          root.length <= 512 &&
+          !/[:<>|"\u0000-\u001f]/.test(root) &&
+          /^(?![A-Za-z]:)[^/*?\[\]{}!]+(?:\/[^/*?\[\]{}!]+)*$/.test(
+            slash(root),
+          ) &&
+          !slash(root)
+            .split('/')
+            .some((part) => part === '.' || part === '..'),
+      )
+    )
+      throw new Error(
+        'applicationRoots must contain 1..100 relative directory paths without globs or traversal',
+      );
+    const roots = value.applicationRoots.map((root: string) =>
+      slash(root).toLowerCase(),
+    );
+    for (let i = 0; i < roots.length; i++)
+      if (
+        roots.some(
+          (other, j) =>
+            i !== j && (other === roots[i] || other.startsWith(roots[i] + '/')),
+        )
+      )
+        throw new Error('applicationRoots must not overlap');
+  }
   for (const key of ['include', 'exclude']) {
     const patterns = value[key];
     if (

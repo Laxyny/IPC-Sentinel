@@ -1,0 +1,70 @@
+{
+  "electron-minimal-repro": {
+    "files": 3,
+    "endpoints": 0,
+    "findings": {
+      "IPC001": 0,
+      "IPC002": 0,
+      "IPC003": 0,
+      "IPC004": 0,
+      "IPC005": 0,
+      "IPC006": 0,
+      "IPC007": 0,
+      "IPC008": 0,
+      "IPC009": 0
+    },
+    "inconclusive": 0,
+    "complete": true
+  },
+  "electron-vite-react": {
+    "files": 15,
+    "endpoints": 8,
+    "findings": {
+      "IPC001": 4,
+      "IPC002": 0,
+      "IPC003": 0,
+      "IPC004": 0,
+      "IPC005": 2,
+      "IPC006": 1,
+      "IPC007": 3,
+      "IPC008": 0,
+      "IPC009": 0
+    },
+    "inconclusive": 3,
+    "complete": true
+  },
+  "electron-fiddle": {
+    "files": 290,
+    "endpoints": 66,
+    "findings": {
+      "IPC001": 0,
+      "IPC002": 0,
+      "IPC003": 56,
+      "IPC004": 1,
+      "IPC005": 0,
+      "IPC006": 2,
+      "IPC007": 3,
+      "IPC008": 9,
+      "IPC009": 0
+    },
+    "inconclusive": 68,
+    "complete": false
+  },
+  "signal-desktop": {
+    "files": 3001,
+    "endpoints": 279,
+    "findings": {
+      "IPC001": 0,
+      "IPC002": 4,
+      "IPC003": 8,
+      "IPC004": 1,
+      "IPC005": 0,
+      "IPC006": 10,
+      "IPC007": 26,
+      "IPC008": 28,
+      "IPC009": 0
+    },
+    "inconclusive": 62,
+    "complete": false
+  }
+}

@@ -140,12 +140,31 @@ export async function createSemantic(discovery: Discovery): Promise<Semantic> {
     resolveModuleNames: (names, file) =>
       names.map((name) => resolve(name, file)),
   };
-  return new Semantic(ts.createProgram([...sources.keys()], options, host));
+  return new Semantic(
+    ts.createProgram([...sources.keys()], options, host),
+    (specifier, file) => resolve(specifier, file)?.resolvedFileName,
+  );
 }
 
 export class Semantic {
   readonly checker: ts.TypeChecker;
-  constructor(readonly program: ts.Program) {
+  private readonly origins = new Map<ts.Node, string | undefined>();
+  private readonly values = new Map<
+    ts.Node,
+    string | boolean | number | undefined
+  >();
+  private readonly objects = new Map<
+    ts.Node,
+    Map<string, ts.Node> | undefined
+  >();
+  private readonly cjs = new Map<string, Map<string, ts.Node> | undefined>();
+  constructor(
+    readonly program: ts.Program,
+    private readonly resolveLocal?: (
+      specifier: string,
+      file: string,
+    ) => string | undefined,
+  ) {
     this.checker = program.getTypeChecker();
   }
   declaration(node: ts.Node): ts.Declaration | undefined {
@@ -169,7 +188,31 @@ export class Semantic {
   }
   initializer(node: ts.Node, depth = 0): ts.Node | undefined {
     if (depth > 20) return undefined;
+    node = this.unwrap(node);
+    if (
+      ts.isPropertyAccessExpression(node) ||
+      ts.isElementAccessExpression(node)
+    ) {
+      const name = ts.isPropertyAccessExpression(node)
+        ? node.name.text
+        : this.value(node.argumentExpression, depth + 1);
+      if (typeof name === 'string') {
+        const member = this.object(node.expression, depth + 1)?.get(name);
+        if (member) return member;
+      }
+    }
     const decl = this.declaration(node);
+    if (
+      decl &&
+      ts.isPropertyAccessExpression(decl) &&
+      ts.isIdentifier(decl.expression) &&
+      decl.expression.text === 'exports' &&
+      ts.isBinaryExpression(decl.parent) &&
+      decl.parent.left === decl &&
+      decl.parent.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+      this.cjsGlobal(decl.expression)
+    )
+      return decl.parent.right;
     if (
       decl &&
       ts.isVariableDeclaration(decl) &&
@@ -200,6 +243,16 @@ export class Semantic {
     input: ts.Node | undefined,
     depth = 0,
   ): string | boolean | number | undefined {
+    if (!input) return undefined;
+    if (depth === 0 && this.values.has(input)) return this.values.get(input);
+    const result = this.resolveValue(input, depth);
+    if (depth === 0) this.values.set(input, result);
+    return result;
+  }
+  private resolveValue(
+    input: ts.Node,
+    depth: number,
+  ): string | boolean | number | undefined {
     if (!input || depth > 20) return undefined;
     const node = this.unwrap(input);
     if (ts.isStringLiteralLike(node)) return node.text;
@@ -228,21 +281,91 @@ export class Semantic {
       ts.isPropertyAccessExpression(node) ||
       ts.isElementAccessExpression(node)
     ) {
+      const constant = this.checker.getConstantValue(node);
+      if (constant !== undefined) return constant;
       const name = ts.isPropertyAccessExpression(node)
         ? node.name.text
         : this.value(node.argumentExpression, depth + 1);
+      if (typeof name === 'string') {
+        const member = this.checker
+          .getTypeAtLocation(node.expression)
+          .getProperty(name)?.valueDeclaration;
+        if (member && ts.isEnumMember(member))
+          return this.checker.getConstantValue(member);
+      }
       const item =
         typeof name === 'string'
           ? this.object(node.expression, depth + 1)?.get(name)
           : undefined;
       if (item) return this.value(item, depth + 1);
     }
+    const decl = this.declaration(node);
+    if (decl && ts.isEnumMember(decl))
+      return this.checker.getConstantValue(decl);
     const init = this.initializer(node, depth + 1);
     return init && init !== node ? this.value(init, depth + 1) : undefined;
   }
   object(input: ts.Node, depth = 0): Map<string, ts.Node> | undefined {
+    if (depth === 0 && this.objects.has(input)) return this.objects.get(input);
+    const result = this.resolveObject(input, depth);
+    if (depth === 0) this.objects.set(input, result);
+    return result;
+  }
+  private resolveObject(
+    input: ts.Node,
+    depth: number,
+  ): Map<string, ts.Node> | undefined {
     if (depth > 20) return undefined;
     const node = this.unwrap(input);
+    if (
+      ts.isCallExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === 'require' &&
+      !this.declaration(node.expression) &&
+      node.arguments[0] &&
+      ts.isStringLiteral(node.arguments[0]) &&
+      node.arguments[0].text.startsWith('.')
+    ) {
+      const file = this.resolveLocal?.(
+        node.arguments[0].text,
+        node.getSourceFile().fileName,
+      );
+      if (!file) return undefined;
+      if (this.cjs.has(file)) return this.cjs.get(file);
+      // Break cyclic requires before looking at any exported object values.
+      this.cjs.set(file, undefined);
+      const source = this.program.getSourceFile(file);
+      const result = new Map<string, ts.Node>();
+      for (const statement of source?.statements ?? []) {
+        if (
+          !ts.isExpressionStatement(statement) ||
+          !ts.isBinaryExpression(statement.expression) ||
+          statement.expression.operatorToken.kind !== ts.SyntaxKind.EqualsToken
+        )
+          continue;
+        const { left, right } = statement.expression;
+        if (!ts.isPropertyAccessExpression(left)) continue;
+        if (
+          ts.isIdentifier(left.expression) &&
+          left.expression.text === 'exports' &&
+          this.cjsGlobal(left.expression)
+        )
+          result.set(left.name.text, right);
+        if (
+          ts.isIdentifier(left.expression) &&
+          left.expression.text === 'module' &&
+          left.name.text === 'exports' &&
+          this.cjsGlobal(left.expression)
+        ) {
+          const exports = this.object(right, depth + 1);
+          if (!exports) return undefined;
+          result.clear();
+          for (const [name, value] of exports) result.set(name, value);
+        }
+      }
+      this.cjs.set(file, result);
+      return result;
+    }
     if (!ts.isObjectLiteralExpression(node)) {
       const init = this.initializer(node, depth + 1);
       return init && init !== node ? this.object(init, depth + 1) : undefined;
@@ -274,7 +397,23 @@ export class Semantic {
     }
     return result;
   }
+  private cjsGlobal(node: ts.Identifier): boolean {
+    const decl = this.declaration(node);
+    // TypeScript gives implicit CommonJS exports a property-access declaration.
+    return (
+      !decl ||
+      (ts.isPropertyAccessExpression(decl) &&
+        ts.isIdentifier(decl.expression) &&
+        decl.expression.text === node.text)
+    );
+  }
   origin(input: ts.Node, depth = 0): string | undefined {
+    if (depth === 0 && this.origins.has(input)) return this.origins.get(input);
+    const result = this.resolveOrigin(input, depth);
+    if (depth === 0) this.origins.set(input, result);
+    return result;
+  }
+  private resolveOrigin(input: ts.Node, depth: number): string | undefined {
     if (depth > 20) return undefined;
     const node = this.unwrap(input);
     if (
@@ -332,8 +471,11 @@ export class Semantic {
     const init = this.initializer(node, depth + 1);
     return init && init !== node ? this.origin(init, depth + 1) : undefined;
   }
-  fn(input: ts.Node | undefined): ts.FunctionLikeDeclaration | undefined {
-    if (!input) return undefined;
+  fn(
+    input: ts.Node | undefined,
+    depth = 0,
+  ): ts.FunctionLikeDeclaration | undefined {
+    if (!input || depth > 20) return undefined;
     const node = this.unwrap(input);
     if (
       ts.isArrowFunction(node) ||
@@ -343,15 +485,13 @@ export class Semantic {
     )
       return node;
     const decl = this.declaration(node);
-    if (decl && ts.isFunctionDeclaration(decl)) return decl;
+    if (
+      decl &&
+      (ts.isFunctionDeclaration(decl) || ts.isMethodDeclaration(decl))
+    )
+      return decl;
     const init = this.initializer(node);
-    return init ? this.fnDirect(init) : undefined;
-  }
-  private fnDirect(node: ts.Node): ts.FunctionLikeDeclaration | undefined {
-    node = this.unwrap(node);
-    return ts.isArrowFunction(node) || ts.isFunctionExpression(node)
-      ? node
-      : undefined;
+    return init && init !== node ? this.fn(init, depth + 1) : undefined;
   }
 }
 export function visit(node: ts.Node, action: (node: ts.Node) => void): void {
