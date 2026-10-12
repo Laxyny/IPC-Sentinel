@@ -140,7 +140,10 @@ export async function createSemantic(discovery: Discovery): Promise<Semantic> {
     resolveModuleNames: (names, file) =>
       names.map((name) => resolve(name, file)),
   };
-  return new Semantic(ts.createProgram([...sources.keys()], options, host));
+  return new Semantic(
+    ts.createProgram([...sources.keys()], options, host),
+    (specifier, file) => resolve(specifier, file)?.resolvedFileName,
+  );
 }
 
 export class Semantic {
@@ -154,7 +157,14 @@ export class Semantic {
     ts.Node,
     Map<string, ts.Node> | undefined
   >();
-  constructor(readonly program: ts.Program) {
+  private readonly cjs = new Map<string, Map<string, ts.Node> | undefined>();
+  constructor(
+    readonly program: ts.Program,
+    private readonly resolveLocal?: (
+      specifier: string,
+      file: string,
+    ) => string | undefined,
+  ) {
     this.checker = program.getTypeChecker();
   }
   declaration(node: ts.Node): ts.Declaration | undefined {
@@ -178,7 +188,31 @@ export class Semantic {
   }
   initializer(node: ts.Node, depth = 0): ts.Node | undefined {
     if (depth > 20) return undefined;
+    node = this.unwrap(node);
+    if (
+      ts.isPropertyAccessExpression(node) ||
+      ts.isElementAccessExpression(node)
+    ) {
+      const name = ts.isPropertyAccessExpression(node)
+        ? node.name.text
+        : this.value(node.argumentExpression, depth + 1);
+      if (typeof name === 'string') {
+        const member = this.object(node.expression, depth + 1)?.get(name);
+        if (member) return member;
+      }
+    }
     const decl = this.declaration(node);
+    if (
+      decl &&
+      ts.isPropertyAccessExpression(decl) &&
+      ts.isIdentifier(decl.expression) &&
+      decl.expression.text === 'exports' &&
+      ts.isBinaryExpression(decl.parent) &&
+      decl.parent.left === decl &&
+      decl.parent.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+      this.cjsGlobal(decl.expression)
+    )
+      return decl.parent.right;
     if (
       decl &&
       ts.isVariableDeclaration(decl) &&
@@ -283,6 +317,55 @@ export class Semantic {
   ): Map<string, ts.Node> | undefined {
     if (depth > 20) return undefined;
     const node = this.unwrap(input);
+    if (
+      ts.isCallExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === 'require' &&
+      !this.declaration(node.expression) &&
+      node.arguments[0] &&
+      ts.isStringLiteral(node.arguments[0]) &&
+      node.arguments[0].text.startsWith('.')
+    ) {
+      const file = this.resolveLocal?.(
+        node.arguments[0].text,
+        node.getSourceFile().fileName,
+      );
+      if (!file) return undefined;
+      if (this.cjs.has(file)) return this.cjs.get(file);
+      // Break cyclic requires before looking at any exported object values.
+      this.cjs.set(file, undefined);
+      const source = this.program.getSourceFile(file);
+      const result = new Map<string, ts.Node>();
+      for (const statement of source?.statements ?? []) {
+        if (
+          !ts.isExpressionStatement(statement) ||
+          !ts.isBinaryExpression(statement.expression) ||
+          statement.expression.operatorToken.kind !== ts.SyntaxKind.EqualsToken
+        )
+          continue;
+        const { left, right } = statement.expression;
+        if (!ts.isPropertyAccessExpression(left)) continue;
+        if (
+          ts.isIdentifier(left.expression) &&
+          left.expression.text === 'exports' &&
+          this.cjsGlobal(left.expression)
+        )
+          result.set(left.name.text, right);
+        if (
+          ts.isIdentifier(left.expression) &&
+          left.expression.text === 'module' &&
+          left.name.text === 'exports' &&
+          this.cjsGlobal(left.expression)
+        ) {
+          const exports = this.object(right, depth + 1);
+          if (!exports) return undefined;
+          result.clear();
+          for (const [name, value] of exports) result.set(name, value);
+        }
+      }
+      this.cjs.set(file, result);
+      return result;
+    }
     if (!ts.isObjectLiteralExpression(node)) {
       const init = this.initializer(node, depth + 1);
       return init && init !== node ? this.object(init, depth + 1) : undefined;
@@ -313,6 +396,16 @@ export class Semantic {
       }
     }
     return result;
+  }
+  private cjsGlobal(node: ts.Identifier): boolean {
+    const decl = this.declaration(node);
+    // TypeScript gives implicit CommonJS exports a property-access declaration.
+    return (
+      !decl ||
+      (ts.isPropertyAccessExpression(decl) &&
+        ts.isIdentifier(decl.expression) &&
+        decl.expression.text === node.text)
+    );
   }
   origin(input: ts.Node, depth = 0): string | undefined {
     if (depth === 0 && this.origins.has(input)) return this.origins.get(input);

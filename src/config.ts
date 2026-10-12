@@ -41,6 +41,7 @@ export function validateConfig(value: unknown): Config {
         (root) =>
           typeof root === 'string' &&
           root.length <= 512 &&
+          !/[:<>|"\u0000-\u001f]/.test(root) &&
           /^(?![A-Za-z]:)[^/*?\[\]{}!]+(?:\/[^/*?\[\]{}!]+)*$/.test(
             slash(root),
           ) &&

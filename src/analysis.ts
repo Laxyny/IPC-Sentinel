@@ -134,17 +134,38 @@ export function analyze(
         const method = resolved?.origin ?? semantic.origin(node.expression);
         const args = resolved?.args ?? node.arguments;
         if (!method?.startsWith('electron.ipcRenderer.')) return;
-        if (typeof semantic.value(args[0]) !== 'string' && args[0]) {
+        if (
+          /^electron\.ipcRenderer\.(invoke|send|sendSync|on|once|addListener)$/.test(
+            method,
+          ) &&
+          typeof semantic.value(args[0]) !== 'string' &&
+          args[0]
+        ) {
           const parameters = new Set(
             fn.parameters
               .map((p) => semantic.checker.getSymbolAtLocation(p.name))
               .filter(Boolean),
           );
           let forwarded = false;
-          visit(args[0], (part) => {
+          const followed = new Set<ts.Node>();
+          const inspectChannel = (part: ts.Node, depth = 0): void => {
+            if (depth > 10 || followed.size > 200 || followed.has(part)) return;
+            followed.add(part);
             const symbol = semantic.checker.getSymbolAtLocation(part);
             if (symbol && parameters.has(symbol)) forwarded = true;
-          });
+            if (ts.isIdentifier(part)) {
+              const decl = semantic.declaration(part);
+              const init =
+                decl &&
+                ts.isBindingElement(decl) &&
+                ts.isVariableDeclaration(decl.parent.parent)
+                  ? decl.parent.parent.initializer
+                  : semantic.initializer(part);
+              if (init) inspectChannel(init, depth + 1);
+            }
+            ts.forEachChild(part, (child) => inspectChannel(child, depth + 1));
+          };
+          inspectChannel(args[0]);
           if (forwarded)
             emit(
               'IPC001',
@@ -410,17 +431,25 @@ export function analyze(
       ) {
         const url = semantic.value(node.arguments[0]);
         // Receiver provenance is deliberately required; unrelated loadURL methods are ignored.
-        const decl = semantic.declaration(node.expression.expression);
-        if (
-          decl &&
-          ts.isVariableDeclaration(decl) &&
-          decl.initializer &&
-          ts.isNewExpression(decl.initializer) &&
-          semantic.origin(decl.initializer.expression) ===
-            'electron.BrowserWindow' &&
-          typeof url === 'string' &&
-          /^http:\/\//i.test(url)
-        )
+        let receiver: ts.Node | undefined = node.expression.expression;
+        let browserWindow = false;
+        for (let depth = 0; receiver && depth < 10; depth++) {
+          receiver = semantic.unwrap(receiver);
+          if (ts.isNewExpression(receiver)) {
+            browserWindow =
+              semantic.origin(receiver.expression) === 'electron.BrowserWindow';
+            break;
+          }
+          const decl = semantic.declaration(receiver);
+          const next: ts.Node | undefined =
+            semantic.initializer(receiver) ??
+            (decl && ts.isVariableDeclaration(decl)
+              ? decl.initializer
+              : undefined);
+          if (next === receiver) break;
+          receiver = next;
+        }
+        if (browserWindow && typeof url === 'string' && /^http:\/\//i.test(url))
           emit(
             'IPC009',
             node,

@@ -14,6 +14,23 @@ async function project(files: Record<string, string>) {
 }
 
 describe('production channel and wrapper regressions', () => {
+  it('does not classify listener cleanup as a renderer-selected request', async () => {
+    const root = await project({
+      'app.ts':
+        "import {contextBridge,ipcRenderer} from 'electron'; contextBridge.exposeInMainWorld('api',{off(channel,callback){ipcRenderer.off(channel,callback)}});",
+    });
+    expect((await scanProject({ root })).diagnostics).toEqual([]);
+  });
+  it('detects renderer-selected channels derived from rest and destructured parameters', async () => {
+    const root = await project({
+      'app.ts':
+        "import {contextBridge,ipcRenderer} from 'electron'; contextBridge.exposeInMainWorld('api',{send(...args){const [channel,...payload]=args; return ipcRenderer.send(channel,...payload);},invoke(channel){const c=channel;return ipcRenderer.invoke(c);},fixed(...args){const channel='fixed';return ipcRenderer.send(channel,...args);}});",
+    });
+    const report = await scanProject({ root });
+    expect(
+      report.diagnostics.filter((d) => d.ruleId === 'IPC001'),
+    ).toHaveLength(2);
+  });
   it('distinguishes fixed bound operations from raw capabilities', async () => {
     const root = await project({
       'app.ts':
@@ -51,6 +68,53 @@ describe('production channel and wrapper regressions', () => {
       'read',
       'prefix:read',
     ]);
+    expect(report.diagnostics).toEqual([]);
+  });
+  it('recognizes CommonJS forwarding wrappers and fixed imported constants', async () => {
+    const root = await project({
+      'helpers.cjs':
+        "const {ipcMain,ipcRenderer}=require('electron'); exports.register=(c,h)=>ipcMain.handle(c,h); exports.request=c=>ipcRenderer.invoke(c);",
+      'channels.cjs':
+        "const channels={Read:'read'}; module.exports={channels};",
+      'main.cjs':
+        "const {register}=require('./helpers.cjs'); const {channels}=require('./channels.cjs'); register(channels.Read,()=>1);",
+      'preload.cjs':
+        "const {request}=require('./helpers.cjs'); request('read');",
+    });
+    const report = await scanProject({ root });
+    expect(report.endpoints.map((e) => e.channel)).toEqual(['read', 'read']);
+    expect(report.diagnostics).toEqual([]);
+  });
+  it('keeps cyclic and shadowed CommonJS exports bounded', async () => {
+    const root = await project({
+      'a.cjs':
+        "const {channels}=require('./b.cjs'); module.exports={channels};",
+      'b.cjs':
+        "const {channels}=require('./a.cjs'); module.exports={channels};",
+      'app.cjs':
+        "const {ipcRenderer}=require('electron'); const {channels}=require('./a.cjs'); ipcRenderer.invoke(channels?.Read);",
+      'fake.cjs': 'const exports={}; exports.invoke=(c)=>c;',
+      'consumer.cjs': "const {invoke}=require('./fake.cjs'); invoke('fake');",
+    });
+    const report = await scanProject({ root });
+    expect(report.endpoints).toHaveLength(1);
+    expect(report.endpoints[0]?.channel).toBeNull();
+    expect(report.diagnostics[0]?.ruleId).toBe('IPC007');
+  });
+  it('assigns imported shared wrapper endpoints to each caller application', async () => {
+    const root = await project({
+      'shared.ts':
+        "import {ipcMain} from 'electron'; export const register=(c,h)=>ipcMain.handle(c,h);",
+      'apps/a/main.ts':
+        "import {register} from '../../shared.js'; register('read',()=>1);",
+      'apps/b/main.ts':
+        "import {register} from '../../shared.js'; register('read',()=>2);",
+    });
+    const report = await scanProject({
+      root,
+      config: { applicationRoots: ['apps/a', 'apps/b'] },
+    });
+    expect(report.endpoints.map((e) => e.scope)).toEqual(['apps/a', 'apps/b']);
     expect(report.diagnostics).toEqual([]);
   });
   it('instantiates imported/re-exported and nested wrappers at caller sites', async () => {
@@ -129,6 +193,19 @@ describe('production channel and wrapper regressions', () => {
     expect(report.files).toEqual(['src/app.ts']);
     expect(report.complete).toBe(true);
   });
+  it('recognizes HTTP loads through const window aliases and rejects local lookalikes', async () => {
+    const root = await project({
+      'app.ts':
+        "import {BrowserWindow} from 'electron'; const win=new BrowserWindow({webPreferences:{nodeIntegration:false,contextIsolation:true}}); const alias=win; alias.loadURL('http://example.test'); win.loadURL('https://example.test'); const fake={loadURL(){}}; const fakeAlias=fake; fakeAlias.loadURL('http://example.test');",
+    });
+    const report = await scanProject({ root });
+    expect(report.diagnostics).toHaveLength(1);
+    expect(report.diagnostics[0]).toMatchObject({
+      ruleId: 'IPC009',
+      kind: 'static',
+      confidence: 'high',
+    });
+  });
   it('ignores unused nested privileged helpers but follows invoked helpers', async () => {
     const root = await project({
       'app.ts':
@@ -142,6 +219,29 @@ describe('production channel and wrapper regressions', () => {
 });
 
 describe('explicit application isolation', () => {
+  it('lets callers select production sources and a build target without synthetic duplicate handlers', async () => {
+    const root = await project({
+      'src/common/main.ts':
+        "import {ipcMain} from 'electron'; ipcMain.handle('update',()=>1);",
+      'src/linux/main.ts':
+        "import {ipcMain} from 'electron'; ipcMain.handle('update',()=>2);",
+      'tests/main.spec.ts':
+        "import {ipcMain} from 'electron'; ipcMain.handle('update',()=>3);",
+    });
+    expect(
+      (await scanProject({ root })).diagnostics.filter(
+        (d) => d.ruleId === 'IPC004',
+      ),
+    ).toHaveLength(1);
+    expect(
+      (
+        await scanProject({
+          root,
+          config: { include: ['src/**/*.ts'], exclude: ['src/linux/**'] },
+        })
+      ).diagnostics,
+    ).toEqual([]);
+  });
   it('prevents a sibling application satisfying missing handlers or causing duplicates', async () => {
     const root = await project({
       'apps/a/main.ts':
