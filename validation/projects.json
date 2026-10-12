@@ -1,0 +1,30 @@
+[
+  {
+    "name": "electron-minimal-repro",
+    "repository": "https://github.com/electron/minimal-repro.git",
+    "commit": "1e3a9803707b420fe8ee1ef0cceb5a7d1106c17a",
+    "license": "CC0-1.0",
+    "architecture": "Plain JavaScript official reproduction template"
+  },
+  {
+    "name": "electron-vite-react",
+    "repository": "https://github.com/electron-vite/electron-vite-react.git",
+    "commit": "18d31d5dcfe6637aa1dd6699babcab1849c83f98",
+    "license": "MIT",
+    "architecture": "TypeScript, React, Vite, electron-builder"
+  },
+  {
+    "name": "electron-fiddle",
+    "repository": "https://github.com/electron/fiddle.git",
+    "commit": "a63225b53664fd750828c29aa35de4b4d0eb0b28",
+    "license": "MIT",
+    "architecture": "TypeScript, React, Electron Forge, channel registry, multiple windows"
+  },
+  {
+    "name": "signal-desktop",
+    "repository": "https://github.com/signalapp/Signal-Desktop.git",
+    "commit": "5c1a030485ea64a1c311288cd6b5eecbe36964cd",
+    "license": "AGPL-3.0",
+    "architecture": "Large TypeScript/React application, electron-builder, multiple preloads, IPC wrappers"
+  }
+]
