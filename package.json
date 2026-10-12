@@ -53,6 +53,7 @@
     "test:coverage": "vitest run --coverage",
     "test:package": "node scripts/package-test.mjs",
     "benchmark": "node scripts/benchmark.mjs",
+    "test:real-world": "node scripts/real-world.mjs --check",
     "validate": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build && npm run test:package",
     "prepack": "npm run build"
   },
