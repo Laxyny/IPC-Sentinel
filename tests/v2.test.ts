@@ -13,6 +13,20 @@ async function project(files: Record<string, string>) {
   return root;
 }
 describe('v0.2 project boundaries and settings', () => {
+  it('tracks destructured handler parameters and local payload bindings without tainting fixed objects', async () => {
+    const root = await project({
+      'main.ts':
+        "import {ipcMain} from 'electron';import {readFileSync} from 'node:fs';ipcMain.handle('a',(_e,{file})=>readFileSync(file));ipcMain.handle('b',(_e,payload)=>{const [file]=payload;return readFileSync(file)});ipcMain.handle('c',()=>{const {file}={file:'fixed'};return readFileSync(file)});",
+    });
+    const findings = (await scanProject({ root })).diagnostics.filter(
+      (d) => d.ruleId === 'IPC002',
+    );
+    expect(findings.map((d) => d.evidence?.ipcInput)).toEqual([
+      'observed',
+      'observed',
+      'not-observed',
+    ]);
+  });
   it('tracks IPC input into shell and application configuration operations without name-based lookalikes', async () => {
     const root = await project({
       'main.ts':

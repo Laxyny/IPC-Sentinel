@@ -50,6 +50,24 @@ export function inspectHandler(
     seen.add(node);
     const decl = semantic.declaration(node);
     if (decl && parameters.has(decl)) return true;
+    if (decl && ts.isBindingElement(decl)) {
+      let owner: ts.Node = decl.parent;
+      while (
+        ts.isBindingElement(owner) ||
+        ts.isObjectBindingPattern(owner) ||
+        ts.isArrayBindingPattern(owner)
+      )
+        owner = owner.parent;
+      if (ts.isParameter(owner) && parameters.has(owner)) return true;
+      if (
+        ts.isVariableDeclaration(owner) &&
+        owner.initializer &&
+        ts.isVariableDeclarationList(owner.parent) &&
+        owner.parent.flags & ts.NodeFlags.Const &&
+        depends(owner.initializer, parameters, seen, depth + 1)
+      )
+        return true;
+    }
     if (ts.isIdentifier(node)) {
       const init = semantic.initializer(node);
       if (init && depends(init, parameters, seen, depth + 1)) return true;
