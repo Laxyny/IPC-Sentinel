@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.0 � release candidate (unpublished)
+## 0.2.0 - 2026-10-19
 
 - Resolve enum channels, bounded local CommonJS exports and simple forwarded IPC wrappers at caller locations.
 - Add optional applicationRoots and endpoint scope to isolate independent application graphs.
@@ -18,7 +18,7 @@
 - Upgrade typescript-eslint to 8.71.2 and paired Vitest/coverage to 5.0.5 after isolated validation and final CI.
 - Prepare actual 0.2.0 tarball and compile a typed consumer against installed declarations.
 
-This candidate is unmerged and unpublished. npm remains 0.1.0. Publication, release tag and release workflow dispatch require exact commit/version approval. See docs/migration-v0.2.md for additive API fields, configuration changes and changed findings.
+See docs/migration-v0.2.md for additive API fields, configuration changes and changed findings.
 
 ## 0.1.0 - 2026-10-12
 

@@ -33,7 +33,7 @@ Tsconfig alias support reads nearest project-local JSON/JSONC `compilerOptions.b
 
 ## Independent application graphs (v0.2)
 
-The v0.2 candidate accepts applicationRoots, an array of 1�100 non-overlapping root-relative directory paths. This option is not available in npm 0.1.0.
+Version 0.2 accepts applicationRoots, an array of 1 to 100 non-overlapping root-relative directory paths. This option is not available in npm 0.1.0.
 
 ```json
 {

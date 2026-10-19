@@ -26,7 +26,7 @@ IPC boundaries are easy to widen accidentally: a preload can forward arbitrary c
 
 **Source stays local.** Scanning does not execute your project or send its source over the network. Every finding includes evidence and remediation guidance.
 
-This branch prepares **v0.2.0** for review. npm currently serves **v0.1.0**; the candidate has not been published. See [v0.2 engineering and validation](docs/v0.2-engineering.md) and the [migration guide](docs/migration-v0.2.md).
+**v0.2.0** adds application boundaries, bounded wrapper resolution and privileged-handler review evidence. See [v0.2 engineering and validation](docs/v0.2-engineering.md) and the [migration guide](docs/migration-v0.2.md).
 
 ## Capabilities
 
@@ -38,7 +38,7 @@ This branch prepares **v0.2.0** for review. npm currently serves **v0.1.0**; the
 | Privileged review      | Potential handler finding       | Guard locations, local-helper evidence and input dependencies              |
 | Bridge/navigation      | Raw IPC and HTTP loads          | Node capabilities, event aliases and unconditional child-window permission |
 
-The candidate keeps rule IDs IPC001�IPC009, report schema version 1 and documented CLI exit codes. Optional evidence fields are additive; changed findings may require CI baseline review.
+The release keeps rule IDs IPC001 through IPC009, report schema version 1 and documented CLI exit codes. Optional evidence fields are additive; changed findings may require CI baseline review.
 
 - Distinguishes `invoke/handle` from `send/on`, including common one-shot variants.
 - Finds undiscovered handlers, duplicate invoke registration sites, dynamic channels, and method mismatches.
