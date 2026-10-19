@@ -43,7 +43,7 @@ export async function createSemantic(discovery: Discovery): Promise<Semantic> {
               for (const target of targets)
                 candidates.push(
                   path.resolve(
-                    config.base,
+                    config.base ?? config.pathsBase,
                     target.replace(
                       '*',
                       star < 0

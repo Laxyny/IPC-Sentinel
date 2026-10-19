@@ -5,8 +5,10 @@ import { slash } from './paths.js';
 import type { Discovery } from './discovery.js';
 
 export interface AliasConfig {
-  base: string;
+  base?: string | undefined;
   paths: Record<string, string[]>;
+  pathsBase: string;
+  hasPaths: boolean;
 }
 const inside = (root: string, file: string): boolean => {
   const relative = path.relative(root, file);
@@ -44,7 +46,11 @@ export async function projectSettings(
     };
     if (!raw || typeof raw !== 'object' || Array.isArray(raw))
       throw new Error('Invalid tsconfig object');
-    let result: AliasConfig = { base: path.dirname(file), paths: {} };
+    let result: AliasConfig = {
+      paths: {},
+      pathsBase: path.dirname(file),
+      hasPaths: false,
+    };
     if (raw.extends !== undefined) {
       const parents = Array.isArray(raw.extends) ? raw.extends : [raw.extends];
       if (!parents.length || parents.length > 10)
@@ -61,7 +67,18 @@ export async function projectSettings(
         let target = path.resolve(path.dirname(file), parent);
         if (!path.extname(target)) target += '.json';
         try {
-          result = await load(target, next);
+          const inherited = await load(target, next);
+          result = {
+            ...result,
+            ...(inherited.base ? { base: inherited.base } : {}),
+            ...(inherited.hasPaths
+              ? {
+                  paths: inherited.paths,
+                  pathsBase: inherited.pathsBase,
+                  hasPaths: true,
+                }
+              : {}),
+          };
         } catch {
           throw new Error('Inherited tsconfig could not be resolved safely');
         }
@@ -76,8 +93,11 @@ export async function projectSettings(
         : typeof opts.baseUrl === 'string'
           ? path.resolve(path.dirname(file), opts.baseUrl)
           : undefined;
-    if (!base) throw new Error('Invalid baseUrl');
+    if (opts?.baseUrl !== undefined && !base)
+      throw new Error('Invalid baseUrl');
     let paths = result.paths;
+    let pathsBase = result.pathsBase;
+    let hasPaths = result.hasPaths;
     if (opts?.paths !== undefined) {
       if (
         !opts.paths ||
@@ -86,6 +106,8 @@ export async function projectSettings(
       )
         throw new Error('Invalid paths');
       paths = {};
+      pathsBase = path.dirname(file);
+      hasPaths = true;
       for (const [key, value] of Object.entries(opts.paths)) {
         if (
           !Array.isArray(value) ||
@@ -93,18 +115,11 @@ export async function projectSettings(
           key.split('*').length > 2
         )
           throw new Error('Invalid alias paths');
-        paths[key] = value.map((v) =>
-          path.resolve(
-            opts.baseUrl === undefined && !raw.extends
-              ? path.dirname(file)
-              : base,
-            v,
-          ),
-        );
+        paths[key] = value;
       }
     }
-    // Inherited paths are already anchored at their declaring configuration.
-    result = { base, paths };
+    // baseUrl is inherited independently; paths without it use their declaring file.
+    result = { base, paths, pathsBase, hasPaths };
     cache.set(file, result);
     return result;
   };

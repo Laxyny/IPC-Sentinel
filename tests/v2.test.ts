@@ -13,6 +13,20 @@ async function project(files: Record<string, string>) {
   return root;
 }
 describe('v0.2 project boundaries and settings', () => {
+  it('merges relative inheritance arrays and anchors child paths without baseUrl at the child config', async () => {
+    const root = await project({
+      'config/base.json': '{"compilerOptions":{"paths":{"unused":["old"]}}}',
+      'config/empty.json': '{}',
+      'app/tsconfig.json':
+        '{"extends":["../config/base","../config/empty"],"compilerOptions":{"paths":{"@channel":["./channel"]}}}',
+      'app/channel.ts': "export const C='read';",
+      'app/preload.ts':
+        "import {ipcRenderer} from 'electron';import {C} from '@channel';ipcRenderer.invoke(C);",
+      'app/main.ts':
+        "import {ipcMain} from 'electron';ipcMain.handle('read',()=>1);",
+    });
+    expect((await scanProject({ root })).diagnostics).toEqual([]);
+  });
   it('reviews raw Node bridge capabilities and renderer-controlled privileged helper arguments', async () => {
     const root = await project({
       'preload.ts':
