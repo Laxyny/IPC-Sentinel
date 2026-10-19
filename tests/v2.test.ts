@@ -13,6 +13,103 @@ async function project(files: Record<string, string>) {
   return root;
 }
 describe('v0.2 project boundaries and settings', () => {
+  it('reviews raw Node bridge capabilities and renderer-controlled privileged helper arguments', async () => {
+    const root = await project({
+      'preload.ts':
+        "import {contextBridge} from 'electron';import {readFileSync} from 'node:fs';function read(value){return readFileSync(value)};contextBridge.exposeInMainWorld('api',{raw:readFileSync,read:(path)=>read(path),fixed:()=>readFileSync('version')});",
+    });
+    const findings = (await scanProject({ root })).diagnostics.filter(
+      (d) => d.ruleId === 'IPC001',
+    );
+    expect(findings).toHaveLength(2);
+    expect(findings.every((d) => d.kind === 'potential')).toBe(true);
+  });
+  it('reviews unconditional window opening only on proven BrowserWindow receivers', async () => {
+    const root = await project({
+      'main.ts':
+        "import {BrowserWindow} from 'electron';const win=new BrowserWindow();win.webContents.setWindowOpenHandler(()=>({action:'allow'}));win.webContents.setWindowOpenHandler(()=>({action:'deny'}));win.webContents.setWindowOpenHandler(({url})=>{if(url==='https://app')return {action:'allow'};return {action:'deny'}});const unrelated={webContents:{setWindowOpenHandler(){}}};unrelated.webContents.setWindowOpenHandler(()=>({action:'allow'}));win.loadFile('index.html');",
+    });
+    const findings = (await scanProject({ root })).diagnostics;
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({
+      ruleId: 'IPC009',
+      kind: 'potential',
+      confidence: 'medium',
+    });
+  });
+  it('reports observed guards and IPC input dependencies without claiming a validated handler', async () => {
+    const root = await project({
+      'main.ts':
+        "import {ipcMain} from 'electron';import {writeFileSync} from 'node:fs';ipcMain.handle('write',(event,payload)=>{if(event.senderFrame.url!=='https://app')throw Error();if(typeof payload!=='string')return;const value=payload;writeFileSync('file',value);});",
+    });
+    const finding = (await scanProject({ root })).diagnostics.find(
+      (d) => d.ruleId === 'IPC002',
+    );
+    expect(finding).toMatchObject({
+      kind: 'potential',
+      confidence: 'low',
+      evidence: {
+        validation: 'observed-guard',
+        ipcInput: 'observed',
+        analysisLimited: false,
+      },
+    });
+    expect(finding?.evidence?.validationLocations).toHaveLength(2);
+  });
+  it('distinguishes helper guards, opaque validators, missing evidence and static sink inputs', async () => {
+    const root = await project({
+      'main.ts':
+        "import {ipcMain} from 'electron';import {writeFileSync} from 'fs';import {validate} from 'unknown';function save(value){if(typeof value!=='string')throw Error();writeFileSync('x',value)};ipcMain.handle('a',(_e,value)=>save(value));ipcMain.handle('b',(_e,value)=>{validate(value);writeFileSync('x',value)});ipcMain.handle('c',()=>writeFileSync('x','constant'));",
+    });
+    const findings = (await scanProject({ root })).diagnostics.filter(
+      (d) => d.ruleId === 'IPC002',
+    );
+    expect(findings.map((d) => d.evidence?.validation)).toEqual([
+      'delegated-guard',
+      'unverified',
+      'not-observed',
+    ]);
+    expect(findings.map((d) => d.evidence?.ipcInput)).toEqual([
+      'observed',
+      'observed',
+      'not-observed',
+    ]);
+  });
+  it('never suppresses review based on a misleading validator name or guard after the sink', async () => {
+    const root = await project({
+      'main.ts':
+        "import {ipcMain} from 'electron';import {execSync} from 'child_process';function validate(value){return true};ipcMain.handle('run',(_e,value)=>{execSync(value);if(!validate(value))return;});",
+    });
+    const finding = (await scanProject({ root })).diagnostics.find(
+      (d) => d.ruleId === 'IPC002',
+    );
+    expect(finding?.kind).toBe('potential');
+    expect(finding?.evidence?.ipcInput).toBe('observed');
+  });
+  it('resolves pure closure factories, object wrappers and constant forwarding preludes', async () => {
+    const root = await project({
+      'ipc.ts':
+        "import {ipcRenderer,ipcMain} from 'electron'; export const invoke=(channel)=>(payload)=>ipcRenderer.invoke(channel,payload); export function register(channel,fn){const key=channel;ipcMain.handle(key,fn)};export const requests={read:invoke('read')};",
+      'main.ts': "import {register} from './ipc'; register('read',()=>1);",
+      'preload.ts':
+        "import {invoke,requests} from './ipc';const read=invoke('read');read(1);requests.read(2);",
+    });
+    const report = await scanProject({ root });
+    expect(report.diagnostics).toEqual([]);
+    expect(report.endpoints.filter((e) => e.channel === 'read')).toHaveLength(
+      3,
+    );
+  });
+  it('keeps guarded factories and side-effecting wrapper preludes unresolved', async () => {
+    const root = await project({
+      'app.ts':
+        "import {ipcRenderer} from 'electron';const factory=(channel)=>{log();return value=>ipcRenderer.invoke(channel,value)};const read=factory('read');read(1);function wrapped(channel){const key=select(channel);return ipcRenderer.invoke(key)};wrapped('read');",
+    });
+    const report = await scanProject({ root });
+    expect(
+      report.diagnostics.filter((d) => d.ruleId === 'IPC007'),
+    ).toHaveLength(2);
+  });
   it('loads relative inherited paths from their declaring config and local overrides', async () => {
     const root = await project({
       'config/base.json': JSON.stringify({

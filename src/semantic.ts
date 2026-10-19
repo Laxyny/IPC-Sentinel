@@ -96,6 +96,10 @@ export async function createSemantic(discovery: Discovery): Promise<Semantic> {
 }
 
 export class Semantic {
+  private readonly functions = new Map<
+    ts.Node,
+    ts.FunctionLikeDeclaration | undefined
+  >();
   readonly checker: ts.TypeChecker;
   private readonly origins = new Map<ts.Node, string | undefined>();
   private readonly values = new Map<
@@ -423,6 +427,17 @@ export class Semantic {
   fn(
     input: ts.Node | undefined,
     depth = 0,
+  ): ts.FunctionLikeDeclaration | undefined {
+    if (!input) return undefined;
+    if (depth === 0 && this.functions.has(input))
+      return this.functions.get(input);
+    const result = this.resolveFunction(input, depth);
+    if (depth === 0) this.functions.set(input, result);
+    return result;
+  }
+  private resolveFunction(
+    input: ts.Node,
+    depth: number,
   ): ts.FunctionLikeDeclaration | undefined {
     if (!input || depth > 20) return undefined;
     const node = this.unwrap(input);
