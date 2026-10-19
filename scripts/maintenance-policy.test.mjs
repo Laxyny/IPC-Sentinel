@@ -35,6 +35,125 @@ const make = () => {
     ['package.json', 'package-lock.json'],
   ];
 };
+const context = () => ({
+  pr: {
+    state: 'open',
+    draft: false,
+    user: { login: 'dependabot[bot]' },
+    base: { ref: 'main' },
+    head: { sha: 'head', repo: { full_name: 'owner/repo' } },
+    labels: [{ name: 'maintenance-approved' }],
+  },
+  sha: 'head',
+  defaultBranch: 'main',
+  repository: 'owner/repo',
+  reviews: [
+    {
+      user: { login: 'maintainer' },
+      state: 'APPROVED',
+      commit_id: 'head',
+      author_association: 'OWNER',
+    },
+  ],
+  checks: [
+    'real-world',
+    ...['ubuntu-latest', 'windows-latest', 'macos-latest'].flatMap((os) =>
+      ['22', '24'].map((node) => `validate (${os}, ${node})`),
+    ),
+  ].map((name, id) => ({
+    id,
+    name,
+    app: { slug: 'github-actions' },
+    status: 'completed',
+    conclusion: 'success',
+  })),
+});
+test('requires current-head human approval and all seven trusted checks', () =>
+  assert.equal(policy.approvedContext(context()), true));
+for (const [name, mutate] of [
+  [
+    'fork',
+    (value) => {
+      value.pr.head.repo.full_name = 'fork/repo';
+    },
+  ],
+  [
+    'non-Dependabot author',
+    (value) => {
+      value.pr.user.login = 'attacker';
+    },
+  ],
+  [
+    'stale head',
+    (value) => {
+      value.sha = 'old';
+    },
+  ],
+  [
+    'missing label',
+    (value) => {
+      value.pr.labels = [];
+    },
+  ],
+  [
+    'stale approval',
+    (value) => {
+      value.reviews[0].commit_id = 'old';
+    },
+  ],
+  [
+    'untrusted approval',
+    (value) => {
+      value.reviews[0].author_association = 'NONE';
+    },
+  ],
+  [
+    'dismissed review',
+    (value) => {
+      value.reviews[0].state = 'DISMISSED';
+    },
+  ],
+  [
+    'changes requested',
+    (value) => {
+      value.reviews.push({ ...value.reviews[0], state: 'CHANGES_REQUESTED' });
+    },
+  ],
+  [
+    'failed check',
+    (value) => {
+      value.checks[0].conclusion = 'failure';
+    },
+  ],
+  [
+    'missing check',
+    (value) => {
+      value.checks.pop();
+    },
+  ],
+  [
+    'spoofed check app',
+    (value) => {
+      value.checks[0].app.slug = 'other';
+    },
+  ],
+  [
+    'new pending check',
+    (value) => {
+      value.checks.push({
+        ...value.checks[0],
+        id: 100,
+        status: 'in_progress',
+        conclusion: null,
+      });
+    },
+  ],
+])
+  test(`rejects maintenance context with ${name}`, () => {
+    const value = context();
+    mutate(value);
+    assert.equal(policy.approvedContext(value), false);
+  });
 test('accepts only allowlisted development patches with production identity intact', () =>
   assert.equal(policy.approvedPatch(...make()), true));
 for (const [name, mutate] of [

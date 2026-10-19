@@ -77,4 +77,53 @@ function approvedPatch(base, head, oldLock, newLock, files) {
   }
   return true;
 }
-module.exports = { approvedPatch };
+function approvedContext({
+  pr,
+  sha,
+  defaultBranch,
+  repository,
+  reviews,
+  checks,
+}) {
+  if (
+    pr.state !== 'open' ||
+    pr.draft ||
+    pr.user?.login !== 'dependabot[bot]' ||
+    pr.base?.ref !== defaultBranch ||
+    pr.head?.repo?.full_name !== repository ||
+    pr.head.sha !== sha ||
+    !pr.labels.some((label) => label.name === 'maintenance-approved')
+  )
+    return false;
+  const latest = new Map();
+  for (const review of reviews)
+    if (review.state !== 'COMMENTED') latest.set(review.user?.login, review);
+  if (
+    [...latest.values()].some((review) => review.state === 'CHANGES_REQUESTED')
+  )
+    return false;
+  if (
+    ![...latest.values()].some(
+      (review) =>
+        review.state === 'APPROVED' &&
+        review.commit_id === sha &&
+        ['OWNER', 'MEMBER', 'COLLABORATOR'].includes(review.author_association),
+    )
+  )
+    return false;
+  const required = [
+    'real-world',
+    ...['ubuntu-latest', 'windows-latest', 'macos-latest'].flatMap((os) =>
+      ['22', '24'].map((node) => `validate (${os}, ${node})`),
+    ),
+  ];
+  return required.every((name) => {
+    const check = checks
+      .filter(
+        (check) => check.name === name && check.app?.slug === 'github-actions',
+      )
+      .sort((a, b) => b.id - a.id)[0];
+    return check?.status === 'completed' && check.conclusion === 'success';
+  });
+}
+module.exports = { approvedPatch, approvedContext };

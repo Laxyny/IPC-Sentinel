@@ -85,12 +85,17 @@ export async function projectSettings(
       }
     }
     const opts = raw.compilerOptions;
-    if (opts && (typeof opts !== 'object' || Array.isArray(opts)))
+    if (
+      opts !== undefined &&
+      (!opts || typeof opts !== 'object' || Array.isArray(opts))
+    )
       throw new Error('Invalid compiler options');
     const base =
       opts?.baseUrl === undefined
         ? result.base
-        : typeof opts.baseUrl === 'string'
+        : typeof opts.baseUrl === 'string' &&
+            opts.baseUrl.length <= 512 &&
+            !opts.baseUrl.includes('\0')
           ? path.resolve(path.dirname(file), opts.baseUrl)
           : undefined;
     if (opts?.baseUrl !== undefined && !base)
@@ -106,12 +111,23 @@ export async function projectSettings(
       )
         throw new Error('Invalid paths');
       paths = {};
+      if (Object.keys(opts.paths).length > 1000)
+        throw new Error('Alias map resource limit');
       pathsBase = path.dirname(file);
       hasPaths = true;
       for (const [key, value] of Object.entries(opts.paths)) {
         if (
           !Array.isArray(value) ||
-          !value.every((v) => typeof v === 'string') ||
+          value.length > 10 ||
+          !value.every(
+            (v) =>
+              typeof v === 'string' &&
+              v.length <= 512 &&
+              !v.includes('\0') &&
+              v.split('*').length <= 2,
+          ) ||
+          !key.length ||
+          key.length > 512 ||
           key.split('*').length > 2
         )
           throw new Error('Invalid alias paths');
@@ -185,7 +201,7 @@ export async function workspaceRoots(
       message:
         'Electron package boundaries are ambiguous; configure applicationRoots explicitly',
     });
-    return undefined;
+    return [];
   }
   discovery.observations.push(
     'Independent Electron package directories form separate application graphs; unassigned source remains inconclusive. Override with applicationRoots.',

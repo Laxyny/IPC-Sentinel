@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, symlink } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, it, expect } from 'vitest';
@@ -13,6 +13,74 @@ async function project(files: Record<string, string>) {
   return root;
 }
 describe('v0.2 project boundaries and settings', () => {
+  it('tracks IPC input into shell and application configuration operations without name-based lookalikes', async () => {
+    const root = await project({
+      'main.ts':
+        "import {ipcMain,app,shell} from 'electron';ipcMain.handle('path',(_e,p)=>app.setPath('userData',p));ipcMain.handle('open',(_e,p)=>shell.openPath(p));const local={setPath(){}};ipcMain.handle('local',(_e,p)=>local.setPath(p));",
+    });
+    const findings = (await scanProject({ root })).diagnostics.filter(
+      (d) => d.ruleId === 'IPC002',
+    );
+    expect(findings).toHaveLength(2);
+    expect(findings.every((d) => d.evidence?.ipcInput === 'observed')).toBe(
+      true,
+    );
+  });
+  it('retains the bounded-analysis limitation on a privileged recursive handler', async () => {
+    const root = await project({
+      'main.ts':
+        "import {ipcMain} from 'electron';import {execSync} from 'node:child_process';function recurse(){recurse()};ipcMain.handle('run',(_e,p)=>{execSync(p);recurse()});",
+    });
+    const finding = (await scanProject({ root })).diagnostics.find(
+      (d) => d.ruleId === 'IPC002',
+    );
+    expect(finding?.evidence?.analysisLimited).toBe(true);
+  });
+  it('does not reuse semantic results after sources change between scans', async () => {
+    const root = await project({
+      'main.ts':
+        "import {ipcMain} from 'electron';ipcMain.handle('read',()=>1);",
+      'preload.ts':
+        "import {ipcRenderer} from 'electron';ipcRenderer.invoke('read');",
+    });
+    expect((await scanProject({ root })).diagnostics).toEqual([]);
+    await writeFile(
+      path.join(root, 'preload.ts'),
+      "import {ipcRenderer} from 'electron';ipcRenderer.invoke('write');",
+    );
+    expect(
+      (await scanProject({ root })).diagnostics.map((d) => d.ruleId),
+    ).toEqual(['IPC003']);
+  });
+  it('rejects inherited configuration through a directory link outside the root', async () => {
+    const outside = await project({
+      'base.json': '{"compilerOptions":{"baseUrl":"."}}',
+    });
+    const root = await project({
+      'tsconfig.json': '{"extends":"./linked/base"}',
+      'app.ts': 'const value=1;',
+    });
+    await symlink(outside, path.join(root, 'linked'), 'junction');
+    const report = await scanProject({ root });
+    expect(report.complete).toBe(false);
+    expect(report.diagnostics.some((d) => d.ruleId === 'IPC008')).toBe(true);
+  });
+  it('keeps nested ambiguous Electron package graphs unassigned instead of cross-matching', async () => {
+    const root = await project({
+      'app/package.json': '{"devDependencies":{"electron":"42"}}',
+      'app/nested/package.json': '{"devDependencies":{"electron":"42"}}',
+      'app/preload.ts':
+        "import {ipcRenderer} from 'electron';ipcRenderer.invoke('read');",
+      'app/nested/main.ts':
+        "import {ipcMain} from 'electron';ipcMain.handle('read',()=>1);",
+    });
+    const report = await scanProject({ root });
+    expect(report.complete).toBe(false);
+    expect(report.diagnostics.map((d) => d.ruleId).sort()).toEqual([
+      'IPC003',
+      'IPC008',
+    ]);
+  });
   it('follows event aliases but accepts extracted primitive event metadata', async () => {
     const root = await project({
       'preload.ts':

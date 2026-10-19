@@ -12,7 +12,7 @@ export type * from './types.js';
 export { rules, getRule, severities } from './rules.js';
 export { formatText, formatSarif } from './formatters.js';
 export { validateConfig } from './config.js';
-export const version = '0.1.0';
+export const version = '0.2.0';
 export async function scanProject(
   options: ScanOptions = {},
 ): Promise<ScanReport> {

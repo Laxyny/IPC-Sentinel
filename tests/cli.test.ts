@@ -48,7 +48,7 @@ describe('built CLI', () => {
   });
   it('documents commands and returns its real version', () => {
     expect(run('--help').stdout).toContain('--fail-on');
-    expect(run('--version').stdout.trim()).toBe('0.1.0');
+    expect(run('--version').stdout.trim()).toBe('0.2.0');
     expect(run('rules').stdout).toContain('IPC009');
     expect(run('explain', 'IPC001').status).toBe(0);
   });
