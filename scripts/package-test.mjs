@@ -85,21 +85,32 @@ const state:string|undefined=finding?.evidence?.validation;
 void state;void version;
 `,
 );
+await writeFile(
+  path.join(temp, 'consumer.cts'),
+  "import api = require('ipc-sentinel'); const version:string=api.version;void version;void api.scanProject({root:'.'});\n",
+);
+await writeFile(
+  path.join(temp, 'tsconfig.json'),
+  JSON.stringify({
+    compilerOptions: {
+      noEmit: true,
+      strict: true,
+      target: 'ES2022',
+      module: 'NodeNext',
+      moduleResolution: 'NodeNext',
+      types: [],
+    },
+    files: ['consumer.ts', 'consumer.cts'],
+  }),
+);
 execFileSync(
   process.execPath,
   [
     path.resolve('node_modules/typescript/bin/tsc'),
-    '--noEmit',
-    '--strict',
-    '--target',
-    'ES2022',
-    '--module',
-    'NodeNext',
-    '--moduleResolution',
-    'NodeNext',
-    'consumer.ts',
+    '--project',
+    'tsconfig.json',
   ],
-  { cwd: temp },
+  { cwd: temp, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
 );
 execFileSync(
   process.execPath,
