@@ -19,6 +19,12 @@ console.log(
     files: report.files.length,
     endpoints: report.endpoints.length,
     findings,
+    findingsBySeverity: Object.fromEntries(
+      ['critical', 'high', 'medium', 'low', 'informational'].map((severity) => [
+        severity,
+        report.diagnostics.filter((d) => d.severity === severity).length,
+      ]),
+    ),
     inconclusive: report.diagnostics.filter((d) => d.kind === 'inconclusive')
       .length,
     complete: report.complete,

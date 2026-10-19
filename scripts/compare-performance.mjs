@@ -59,7 +59,8 @@ console.log(
       node: process.version,
       platform: process.platform,
       baseline:
-        'e08995f analyzer (built checkout with test-only dependency upgrade)',
+        process.env.IPC_SENTINEL_BASELINE_LABEL ??
+        'caller-supplied built baseline; record its revision separately',
       projects: results,
     },
     null,

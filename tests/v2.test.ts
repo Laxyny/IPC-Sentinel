@@ -13,6 +13,17 @@ async function project(files: Record<string, string>) {
   return root;
 }
 describe('v0.2 project boundaries and settings', () => {
+  it('follows event aliases but accepts extracted primitive event metadata', async () => {
+    const root = await project({
+      'preload.ts':
+        "import {contextBridge,ipcRenderer} from 'electron';contextBridge.exposeInMainWorld('api',{bad:cb=>ipcRenderer.on('x',(event,value)=>{const leaked=event;cb({...leaked,value})}),good:cb=>ipcRenderer.on('y',(event,value)=>cb({url:event.senderFrame.url,value}))});",
+    });
+    const findings = (await scanProject({ root })).diagnostics.filter(
+      (d) => d.ruleId === 'IPC001',
+    );
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.message).toContain('event object');
+  });
   it('merges relative inheritance arrays and anchors child paths without baseUrl at the child config', async () => {
     const root = await project({
       'config/base.json': '{"compilerOptions":{"paths":{"unused":["old"]}}}',

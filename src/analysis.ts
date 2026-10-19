@@ -56,6 +56,18 @@ export function analyze(
 ): { diagnostics: Diagnostic[]; endpoints: Endpoint[] } {
   const diagnostics: Diagnostic[] = [];
   const endpoints: Endpoint[] = [];
+  const handlerCache = new Map<
+    ts.FunctionLikeDeclaration,
+    ReturnType<typeof inspectHandler>
+  >();
+  const handlerEvidence = (fn: ts.FunctionLikeDeclaration) => {
+    let evidence = handlerCache.get(fn);
+    if (!evidence) {
+      evidence = inspectHandler(semantic, fn);
+      handlerCache.set(fn, evidence);
+    }
+    return evidence;
+  };
   const calls = new Map<ts.CallExpression, ReturnType<typeof resolveIpcCall>>();
   const instantiatedTemplates = new Set<ts.CallExpression>();
   for (const file of semantic.program.getSourceFiles())
@@ -159,7 +171,7 @@ export function analyze(
     }
     const fn = semantic.fn(input);
     if (fn?.body) {
-      const evidence = inspectHandler(semantic, fn);
+      const evidence = handlerEvidence(fn);
       if (evidence.controlled && evidence.sinks.length)
         emit(
           'IPC001',
@@ -237,8 +249,26 @@ export function analyze(
               if (
                 ts.isCallExpression(part) &&
                 part.arguments.some((arg) => {
-                  let containsEvent = false;
-                  visit(arg, (value) => {
+                  const seen = new Set<ts.Node>();
+                  const containsEvent = (
+                    input: ts.Node,
+                    depth = 0,
+                  ): boolean => {
+                    if (depth > 12 || seen.size > 200 || seen.has(input))
+                      return false;
+                    seen.add(input);
+                    const value = semantic.unwrap(input);
+                    if (ts.isPropertyAccessExpression(value))
+                      return (
+                        ['sender', 'senderFrame'].includes(value.name.text) &&
+                        containsEvent(value.expression, depth + 1)
+                      );
+                    if (ts.isElementAccessExpression(value))
+                      return (
+                        ['sender', 'senderFrame'].includes(
+                          String(semantic.value(value.argumentExpression)),
+                        ) && containsEvent(value.expression, depth + 1)
+                      );
                     const symbol =
                       ts.isIdentifier(value) &&
                       ts.isShorthandPropertyAssignment(value.parent)
@@ -246,10 +276,18 @@ export function analyze(
                             value.parent,
                           )
                         : semantic.checker.getSymbolAtLocation(value);
-                    if (ts.isIdentifier(value) && symbol === eventSymbol)
-                      containsEvent = true;
-                  });
-                  return containsEvent;
+                    if (ts.isIdentifier(value)) {
+                      if (symbol === eventSymbol) return true;
+                      const init = semantic.initializer(value);
+                      if (init && containsEvent(init, depth + 1)) return true;
+                    }
+                    let found = false;
+                    ts.forEachChild(value, (child) => {
+                      if (containsEvent(child, depth + 1)) found = true;
+                    });
+                    return found;
+                  };
+                  return containsEvent(arg);
                 })
               )
                 emit(
@@ -408,7 +446,7 @@ export function analyze(
           if (role === 'main') {
             const fn = semantic.fn(args[1]);
             if (fn) {
-              const evidence = inspectHandler(semantic, fn);
+              const evidence = handlerEvidence(fn);
               if (evidence.sinks.length) {
                 const finding = diagnostic(
                   'IPC002',
