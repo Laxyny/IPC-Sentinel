@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtemp, writeFile, cp, access } from 'node:fs/promises';
+import { mkdtemp, writeFile, cp, access, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import assert from 'node:assert/strict';
@@ -13,7 +13,7 @@ const npm = (args, cwd = process.cwd()) =>
   });
 const packed = JSON.parse(npm(['pack', '--json', '--ignore-scripts']))[0];
 assert.equal(packed.name, 'ipc-sentinel');
-assert.equal(packed.version, '0.1.0');
+assert.equal(packed.version, '0.2.0');
 for (const file of packed.files)
   assert(
     /^(dist\/|docs\/|README\.md$|LICENSE$|CHANGELOG\.md$|SECURITY\.md$|package\.json$|ipc-sentinel\.schema\.json$)/.test(
@@ -23,6 +23,8 @@ for (const file of packed.files)
   );
 assert(packed.files.some((f) => f.path === 'dist/index.d.ts'));
 assert(packed.files.some((f) => f.path === 'dist/cli.js'));
+const metadata = JSON.parse(await readFile('package.json', 'utf8'));
+assert.equal(metadata.version, packed.version);
 const temp = await mkdtemp(path.join(os.tmpdir(), 'ipc-sentinel-package-'));
 await writeFile(
   path.join(temp, 'package.json'),
@@ -73,6 +75,43 @@ execFileSync(
   ],
   { cwd: temp },
 );
+await writeFile(
+  path.join(temp, 'consumer.ts'),
+  `import {scanProject,version,type Diagnostic,type Config} from 'ipc-sentinel';
+const config:Config={applicationRoots:['desktop']};
+const report=await scanProject({root:'.',config});
+const finding:Diagnostic|undefined=report.diagnostics[0];
+const state:string|undefined=finding?.evidence?.validation;
+void state;void version;
+`,
+);
+await writeFile(
+  path.join(temp, 'consumer.cts'),
+  "import api = require('ipc-sentinel'); const version:string=api.version;void version;void api.scanProject({root:'.'});\n",
+);
+await writeFile(
+  path.join(temp, 'tsconfig.json'),
+  JSON.stringify({
+    compilerOptions: {
+      noEmit: true,
+      strict: true,
+      target: 'ES2022',
+      module: 'NodeNext',
+      moduleResolution: 'NodeNext',
+      types: [],
+    },
+    files: ['consumer.ts', 'consumer.cts'],
+  }),
+);
+execFileSync(
+  process.execPath,
+  [
+    path.resolve('node_modules/typescript/bin/tsc'),
+    '--project',
+    'tsconfig.json',
+  ],
+  { cwd: temp, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+);
 execFileSync(
   process.execPath,
   [
@@ -90,7 +129,7 @@ const shim = path.join(
 await access(shim);
 assert.equal(
   npm(['exec', '--offline', '--', 'ipc-sentinel', '--version'], temp).trim(),
-  '0.1.0',
+  '0.2.0',
 );
 const dry = JSON.parse(
   npm([
@@ -106,8 +145,8 @@ const dry = JSON.parse(
     'public',
   ]),
 );
-assert(dry['ipc-sentinel@0.1.0'] || dry.id === 'ipc-sentinel@0.1.0');
-const dryPackage = dry['ipc-sentinel@0.1.0'] ?? dry;
+assert(dry['ipc-sentinel@0.2.0'] || dry.id === 'ipc-sentinel@0.2.0');
+const dryPackage = dry['ipc-sentinel@0.2.0'] ?? dry;
 assert.equal(dryPackage.integrity, packed.integrity);
 assert.equal(dryPackage.files.length, packed.files.length);
 console.log(

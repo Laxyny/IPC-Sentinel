@@ -4,7 +4,7 @@ const definitions: [string, string, Severity, string, string][] = [
     'IPC001',
     'Dangerous IPC bridge exposure',
     'high',
-    'A general-purpose bridge or leaked Electron event can weaken the preload boundary.',
+    'A general-purpose bridge, renderer-controlled privileged call or leaked Electron event can weaken the preload boundary.',
     'Expose one method per allowed operation; fix channel names and strip the event argument from callbacks.',
   ],
   [
@@ -60,7 +60,7 @@ const definitions: [string, string, Severity, string, string][] = [
     'IPC009',
     'Insecure remote content',
     'medium',
-    'A statically resolved HTTP URL is loaded without transport protection.',
+    'An HTTP destination is loaded without transport protection, or a window-open handler unconditionally permits child windows. Review remote content policy.',
     'Load local trusted content or an HTTPS destination with restrictive navigation and permission policies.',
   ],
 ];

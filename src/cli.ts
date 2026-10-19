@@ -13,6 +13,7 @@ Options:
   --config <file>          JSON configuration path
   --include <glob>         Include glob (repeatable)
   --exclude <glob>         Additional exclusion (repeatable)
+  --application-root <dir> Independent application directory (repeatable)
   --fail-on <severity>     Minimum failing severity (default high)
   --quiet                 Omit text summary
   --verbose               Print discovery observations to stderr
@@ -30,6 +31,7 @@ async function main(): Promise<void> {
       config: { type: 'string' },
       include: { type: 'string', multiple: true },
       exclude: { type: 'string', multiple: true },
+      'application-root': { type: 'string', multiple: true },
       'fail-on': { type: 'string' },
       quiet: { type: 'boolean' },
       verbose: { type: 'boolean' },
@@ -86,6 +88,8 @@ async function main(): Promise<void> {
   const config: Config = {};
   if (args.values.include) config.include = args.values.include;
   if (args.values.exclude) config.exclude = args.values.exclude;
+  if (args.values['application-root'])
+    config.applicationRoots = args.values['application-root'];
   const report = await scanProject({
     root: target ?? process.cwd(),
     config,

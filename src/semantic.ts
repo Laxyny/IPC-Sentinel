@@ -1,61 +1,10 @@
 import ts from 'typescript';
 import path from 'node:path';
-import { readJson } from './config.js';
+import { projectSettings } from './project.js';
 import type { Discovery } from './discovery.js';
 
-type AliasConfig = { base: string; paths: Record<string, string[]> };
 export async function createSemantic(discovery: Discovery): Promise<Semantic> {
-  const aliases = new Map<string, AliasConfig>();
-  const checked = new Set<string>();
-  for (const file of discovery.sources.keys()) {
-    let dir = path.dirname(file);
-    while (!checked.has(dir)) {
-      checked.add(dir);
-      try {
-        const raw = (await readJson(path.join(dir, 'tsconfig.json'), true)) as {
-          compilerOptions?: { baseUrl?: unknown; paths?: unknown };
-          extends?: unknown;
-        };
-        const opts = raw.compilerOptions;
-        if (raw.extends)
-          discovery.observations.push(
-            'Inherited tsconfig settings are not loaded; supply local baseUrl and paths for aliases.',
-          );
-        if (
-          opts &&
-          (opts.baseUrl === undefined || typeof opts.baseUrl === 'string') &&
-          opts.paths &&
-          typeof opts.paths === 'object'
-        ) {
-          const paths: Record<string, string[]> = {};
-          for (const [key, value] of Object.entries(opts.paths))
-            if (
-              Array.isArray(value) &&
-              value.every((v) => typeof v === 'string')
-            )
-              paths[key] = value;
-          aliases.set(dir, {
-            base: path.resolve(dir, opts.baseUrl ?? '.'),
-            paths,
-          });
-        }
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT')
-          discovery.issues.push({
-            file: path.relative(
-              discovery.root,
-              path.join(dir, 'tsconfig.json'),
-            ),
-            message:
-              'tsconfig JSON could not be read; aliases may be incomplete',
-          });
-      }
-      if (dir === discovery.root) break;
-      const parent = path.dirname(dir);
-      if (parent === dir) break;
-      dir = parent;
-    }
-  }
+  const aliases = await projectSettings(discovery);
   const options: ts.CompilerOptions = {
     allowJs: true,
     checkJs: false,
@@ -94,7 +43,7 @@ export async function createSemantic(discovery: Discovery): Promise<Semantic> {
               for (const target of targets)
                 candidates.push(
                   path.resolve(
-                    config.base,
+                    config.base ?? config.pathsBase,
                     target.replace(
                       '*',
                       star < 0
@@ -147,6 +96,10 @@ export async function createSemantic(discovery: Discovery): Promise<Semantic> {
 }
 
 export class Semantic {
+  private readonly functions = new Map<
+    ts.Node,
+    ts.FunctionLikeDeclaration | undefined
+  >();
   readonly checker: ts.TypeChecker;
   private readonly origins = new Map<ts.Node, string | undefined>();
   private readonly values = new Map<
@@ -474,6 +427,17 @@ export class Semantic {
   fn(
     input: ts.Node | undefined,
     depth = 0,
+  ): ts.FunctionLikeDeclaration | undefined {
+    if (!input) return undefined;
+    if (depth === 0 && this.functions.has(input))
+      return this.functions.get(input);
+    const result = this.resolveFunction(input, depth);
+    if (depth === 0) this.functions.set(input, result);
+    return result;
+  }
+  private resolveFunction(
+    input: ts.Node,
+    depth: number,
   ): ts.FunctionLikeDeclaration | undefined {
     if (!input || depth > 20) return undefined;
     const node = this.unwrap(input);

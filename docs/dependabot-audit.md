@@ -1,5 +1,7 @@
 # Dependabot audit
 
+Historical audit from 12 October 2026. The current v0.2 decisions for PRs #2, #8 and #9 are in [the engineering record](v0.2-engineering.md).
+
 Audit of every dependency PR open at the start of the hardening mission. The production analyzer remains on TypeScript 5.9.3 and picomatch 4.0.7; engines remain Node >=22.13.0. Updates were reviewed against current main, not merged solely because they were proposed by a bot.
 
 | PR                                                  | Dependency          | Proposed version | Compatibility                                                  | Decision             | Reason                                                                                                                                                         |

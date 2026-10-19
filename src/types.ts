@@ -10,6 +10,14 @@ export interface Location {
   endColumn: number;
 }
 export interface Diagnostic {
+  evidence?: {
+    validation:
+      'observed-guard' | 'delegated-guard' | 'unverified' | 'not-observed';
+    ipcInput: 'observed' | 'not-observed' | 'unresolved';
+    sinkLocations: Location[];
+    validationLocations: Location[];
+    analysisLimited: boolean;
+  };
   ruleId: string;
   title: string;
   severity: Severity;

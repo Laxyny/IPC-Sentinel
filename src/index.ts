@@ -6,12 +6,13 @@ import { discover, slash } from './discovery.js';
 import { createSemantic, visit } from './semantic.js';
 import { analyze, diagnostic } from './analysis.js';
 import { withinScope } from './paths.js';
+import { workspaceRoots } from './project.js';
 import type { ScanOptions, ScanReport } from './types.js';
 export type * from './types.js';
 export { rules, getRule, severities } from './rules.js';
 export { formatText, formatSarif } from './formatters.js';
 export { validateConfig } from './config.js';
-export const version = '0.1.0';
+export const version = '0.2.0';
 export async function scanProject(
   options: ScanOptions = {},
 ): Promise<ScanReport> {
@@ -22,6 +23,10 @@ export async function scanProject(
     options.config,
   );
   const discovery = await discover(rootInput, config);
+  if (!config.applicationRoots) {
+    const roots = await workspaceRoots(discovery);
+    if (roots) config.applicationRoots = roots;
+  }
   const semantic = await createSemantic(discovery);
   const analyzed = analyze(semantic, discovery.root, config);
   for (const scope of config.applicationRoots ?? [])

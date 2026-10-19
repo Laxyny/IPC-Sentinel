@@ -36,6 +36,8 @@ jobs:
       - run: npm install --global npm@11.6.4
       - run: npm ci --ignore-scripts
       - run: npm run validate
+      - run: npm run test:coverage
+      - run: npm run test:real-world -- --fetch
       - run: npm audit --audit-level=moderate
   publish:
     needs: validate

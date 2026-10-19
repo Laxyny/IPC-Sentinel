@@ -92,6 +92,7 @@ for (const project of projects) {
       'files',
       'endpoints',
       'findings',
+      'findingsBySeverity',
       'inconclusive',
       'complete',
     ])

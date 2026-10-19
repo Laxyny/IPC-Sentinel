@@ -4,6 +4,7 @@ import { slash } from './discovery.js';
 import { withinScope } from './paths.js';
 import { Semantic, visit } from './semantic.js';
 import { resolveIpcCall } from './wrappers.js';
+import { inspectHandler, privilegedOrigin } from './handler.js';
 import { getRule } from './rules.js';
 import type {
   Config,
@@ -55,6 +56,18 @@ export function analyze(
 ): { diagnostics: Diagnostic[]; endpoints: Endpoint[] } {
   const diagnostics: Diagnostic[] = [];
   const endpoints: Endpoint[] = [];
+  const handlerCache = new Map<
+    ts.FunctionLikeDeclaration,
+    ReturnType<typeof inspectHandler>
+  >();
+  const handlerEvidence = (fn: ts.FunctionLikeDeclaration) => {
+    let evidence = handlerCache.get(fn);
+    if (!evidence) {
+      evidence = inspectHandler(semantic, fn);
+      handlerCache.set(fn, evidence);
+    }
+    return evidence;
+  };
   const calls = new Map<ts.CallExpression, ReturnType<typeof resolveIpcCall>>();
   const instantiatedTemplates = new Set<ts.CallExpression>();
   for (const file of semantic.program.getSourceFiles())
@@ -78,6 +91,23 @@ export function analyze(
       diagnostic(id, location(root, node), message, kind, confidence),
     );
   };
+  function isWindow(input: ts.Node): boolean {
+    let receiver: ts.Node | undefined = input;
+    for (let depth = 0; receiver && depth < 10; depth++) {
+      receiver = semantic.unwrap(receiver);
+      if (ts.isNewExpression(receiver))
+        return (
+          semantic.origin(receiver.expression) === 'electron.BrowserWindow'
+        );
+      const decl = semantic.declaration(receiver);
+      const next: ts.Node | undefined =
+        semantic.initializer(receiver) ??
+        (decl && ts.isVariableDeclaration(decl) ? decl.initializer : undefined);
+      if (next === receiver) break;
+      receiver = next;
+    }
+    return false;
+  }
   function bridge(input: ts.Node, seen = new Set<ts.Node>()): void {
     if (seen.has(input)) return;
     if (seen.size > 200) {
@@ -92,6 +122,19 @@ export function analyze(
     }
     seen.add(input);
     const origin = semantic.origin(input);
+    if (
+      privilegedOrigin(origin) &&
+      /^(fs|child_process)(\.|\/)/.test(origin!)
+    ) {
+      emit(
+        'IPC001',
+        input,
+        'A raw filesystem or process capability is exposed through contextBridge.',
+        'potential',
+        'high',
+      );
+      return;
+    }
     const bound = semantic.unwrap(semantic.initializer(input) ?? input);
     if (
       ts.isCallExpression(bound) &&
@@ -128,6 +171,15 @@ export function analyze(
     }
     const fn = semantic.fn(input);
     if (fn?.body) {
+      const evidence = handlerEvidence(fn);
+      if (evidence.controlled && evidence.sinks.length)
+        emit(
+          'IPC001',
+          input,
+          'An exposed bridge function forwards renderer-controlled input to a privileged API; review validation.',
+          'potential',
+          'medium',
+        );
       visit(fn.body, (node) => {
         if (!ts.isCallExpression(node)) return;
         const resolved = calls.get(node);
@@ -197,8 +249,26 @@ export function analyze(
               if (
                 ts.isCallExpression(part) &&
                 part.arguments.some((arg) => {
-                  let containsEvent = false;
-                  visit(arg, (value) => {
+                  const seen = new Set<ts.Node>();
+                  const containsEvent = (
+                    input: ts.Node,
+                    depth = 0,
+                  ): boolean => {
+                    if (depth > 12 || seen.size > 200 || seen.has(input))
+                      return false;
+                    seen.add(input);
+                    const value = semantic.unwrap(input);
+                    if (ts.isPropertyAccessExpression(value))
+                      return (
+                        ['sender', 'senderFrame'].includes(value.name.text) &&
+                        containsEvent(value.expression, depth + 1)
+                      );
+                    if (ts.isElementAccessExpression(value))
+                      return (
+                        ['sender', 'senderFrame'].includes(
+                          String(semantic.value(value.argumentExpression)),
+                        ) && containsEvent(value.expression, depth + 1)
+                      );
                     const symbol =
                       ts.isIdentifier(value) &&
                       ts.isShorthandPropertyAssignment(value.parent)
@@ -206,10 +276,18 @@ export function analyze(
                             value.parent,
                           )
                         : semantic.checker.getSymbolAtLocation(value);
-                    if (ts.isIdentifier(value) && symbol === eventSymbol)
-                      containsEvent = true;
-                  });
-                  return containsEvent;
+                    if (ts.isIdentifier(value)) {
+                      if (symbol === eventSymbol) return true;
+                      const init = semantic.initializer(value);
+                      if (init && containsEvent(init, depth + 1)) return true;
+                    }
+                    let found = false;
+                    ts.forEachChild(value, (child) => {
+                      if (containsEvent(child, depth + 1)) found = true;
+                    });
+                    return found;
+                  };
+                  return containsEvent(arg);
                 })
               )
                 emit(
@@ -238,37 +316,6 @@ export function analyze(
           'high',
         );
     }
-  }
-  function sensitive(
-    fn: ts.FunctionLikeDeclaration,
-    depth = 0,
-    seen = new Set<ts.Node>(),
-  ): boolean {
-    if (!fn.body || depth > 3 || seen.has(fn)) return false;
-    seen.add(fn);
-    let result = false;
-    const inspect = (node: ts.Node): void => {
-      // A nested function's declaration does not prove it executes in a handler.
-      if (ts.isFunctionLike(node)) return;
-      ts.forEachChild(node, inspect);
-      if (!ts.isCallExpression(node)) return;
-      const origin = semantic.origin(node.expression);
-      if (
-        origin &&
-        (/^fs(?:\/promises|\.promises)?\.(?:readFile|readFileSync|writeFile|writeFileSync|unlink|rm|rename|open|appendFile|mkdir|copyFile)$/.test(
-          origin,
-        ) ||
-          /^child_process\.(exec|execSync|execFile|execFileSync|spawn|spawnSync|fork)$/.test(
-            origin,
-          ) ||
-          origin === 'electron.shell.openExternal')
-      )
-        result = true;
-      const helper = semantic.fn(node.expression);
-      if (helper && sensitive(helper, depth + 1, seen)) result = true;
-    };
-    inspect(fn.body);
-    return result;
   }
   for (const file of semantic.program.getSourceFiles()) {
     for (const error of semantic.program.getSyntacticDiagnostics(file)) {
@@ -398,14 +445,42 @@ export function analyze(
             );
           if (role === 'main') {
             const fn = semantic.fn(args[1]);
-            if (fn && sensitive(fn))
-              emit(
-                'IPC002',
-                node,
-                'Handler reaches a filesystem, process execution, or external URL API. Review sender and payload validation, including helpers.',
-                'potential',
-                'low',
-              );
+            if (fn) {
+              const evidence = handlerEvidence(fn);
+              if (evidence.sinks.length) {
+                const finding = diagnostic(
+                  'IPC002',
+                  location(root, node),
+                  'Handler reaches a privileged API. Observed guards and input dependencies are review evidence, not proof of validation.',
+                  'potential',
+                  'low',
+                );
+                finding.evidence = {
+                  validation: evidence.guards.length
+                    ? evidence.delegated
+                      ? 'delegated-guard'
+                      : 'observed-guard'
+                    : evidence.opaque
+                      ? 'unverified'
+                      : 'not-observed',
+                  ipcInput: evidence.controlled
+                    ? 'observed'
+                    : evidence.limited
+                      ? 'unresolved'
+                      : 'not-observed',
+                  sinkLocations: evidence.sinks.map((n) => location(root, n)),
+                  validationLocations: evidence.guards.map((n) =>
+                    location(root, n),
+                  ),
+                  analysisLimited: evidence.limited,
+                };
+                finding.relatedLocations = [
+                  ...finding.evidence.sinkLocations,
+                  ...finding.evidence.validationLocations,
+                ];
+                diagnostics.push(finding);
+              }
+            }
           }
         }
       }
@@ -414,6 +489,41 @@ export function analyze(
         node.arguments[1]
       )
         bridge(node.arguments[1]);
+      if (
+        ts.isPropertyAccessExpression(node.expression) &&
+        node.expression.name.text === 'setWindowOpenHandler'
+      ) {
+        const receiver = node.expression.expression;
+        if (
+          ts.isPropertyAccessExpression(receiver) &&
+          receiver.name.text === 'webContents' &&
+          isWindow(receiver.expression)
+        ) {
+          const fn = semantic.fn(node.arguments[0]);
+          let returned: ts.Node | undefined = fn?.body;
+          if (returned && ts.isBlock(returned)) {
+            const statement =
+              returned.statements.length === 1
+                ? returned.statements[0]
+                : undefined;
+            returned =
+              statement && ts.isReturnStatement(statement)
+                ? statement.expression
+                : undefined;
+          }
+          const action =
+            returned &&
+            semantic.object(semantic.unwrap(returned))?.get('action');
+          if (action && semantic.value(action) === 'allow')
+            emit(
+              'IPC009',
+              node,
+              'Window-open handler unconditionally allows new windows; review destination and child-window isolation.',
+              'potential',
+              'medium',
+            );
+        }
+      }
       if (origin === 'electron.shell.openExternal') {
         const url = semantic.value(node.arguments[0]);
         if (typeof url !== 'string' || !/^https:\/\//i.test(url))
@@ -431,24 +541,7 @@ export function analyze(
       ) {
         const url = semantic.value(node.arguments[0]);
         // Receiver provenance is deliberately required; unrelated loadURL methods are ignored.
-        let receiver: ts.Node | undefined = node.expression.expression;
-        let browserWindow = false;
-        for (let depth = 0; receiver && depth < 10; depth++) {
-          receiver = semantic.unwrap(receiver);
-          if (ts.isNewExpression(receiver)) {
-            browserWindow =
-              semantic.origin(receiver.expression) === 'electron.BrowserWindow';
-            break;
-          }
-          const decl = semantic.declaration(receiver);
-          const next: ts.Node | undefined =
-            semantic.initializer(receiver) ??
-            (decl && ts.isVariableDeclaration(decl)
-              ? decl.initializer
-              : undefined);
-          if (next === receiver) break;
-          receiver = next;
-        }
+        const browserWindow = isWindow(node.expression.expression);
         if (browserWindow && typeof url === 'string' && /^http:\/\//i.test(url))
           emit(
             'IPC009',

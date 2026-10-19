@@ -53,6 +53,7 @@ export function formatSarif(report: ScanReport): object {
       confidence: d.confidence,
       kind: d.kind,
       remediation: d.remediation,
+      ...(d.evidence ? { evidence: d.evidence } : {}),
     },
   });
   return {

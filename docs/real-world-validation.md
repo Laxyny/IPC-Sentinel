@@ -1,6 +1,6 @@
-# Real-world validation: unreleased hardening
+# Historical real-world validation: pre-v0.2 hardening
 
-The published package remains 0.1.0. This report describes development changes against analyzer commit e08995f, whose cross-platform validation succeeded before this mission. The initial repository audit found four open Dependabot PRs with failing checks. Dependency decisions are recorded in [the audit](dependabot-audit.md).
+Current candidate results are recorded in [v0.2 engineering](v0.2-engineering.md); this document preserves the earlier measurements. The published package remains 0.1.0. This report describes development changes against analyzer commit e08995f, whose cross-platform validation succeeded before this mission. The initial repository audit found four open Dependabot PRs with failing checks. Dependency decisions are recorded in [the audit](dependabot-audit.md).
 
 ## Reproducible source-only corpus
 

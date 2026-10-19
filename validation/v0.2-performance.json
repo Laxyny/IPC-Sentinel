@@ -1,0 +1,695 @@
+{
+  "node": "v24.19.0",
+  "platform": "win32",
+  "baseline": "main b6d162201cb0fde9b2e92cc532145c79c8367b88",
+  "projects": [
+    {
+      "name": "electron-minimal-repro",
+      "commit": "1e3a9803707b420fe8ee1ef0cceb5a7d1106c17a",
+      "runs": {
+        "baseline": [
+          {
+            "files": 3,
+            "endpoints": 0,
+            "findings": {
+              "IPC001": 0,
+              "IPC002": 0,
+              "IPC003": 0,
+              "IPC004": 0,
+              "IPC005": 0,
+              "IPC006": 0,
+              "IPC007": 0,
+              "IPC008": 0,
+              "IPC009": 0
+            },
+            "findingsBySeverity": {
+              "critical": 0,
+              "high": 0,
+              "medium": 0,
+              "low": 0,
+              "informational": 0
+            },
+            "inconclusive": 0,
+            "complete": true,
+            "elapsedMs": 46,
+            "peakRssMiB": 85,
+            "rssMiB": 85
+          },
+          {
+            "files": 3,
+            "endpoints": 0,
+            "findings": {
+              "IPC001": 0,
+              "IPC002": 0,
+              "IPC003": 0,
+              "IPC004": 0,
+              "IPC005": 0,
+              "IPC006": 0,
+              "IPC007": 0,
+              "IPC008": 0,
+              "IPC009": 0
+            },
+            "findingsBySeverity": {
+              "critical": 0,
+              "high": 0,
+              "medium": 0,
+              "low": 0,
+              "informational": 0
+            },
+            "inconclusive": 0,
+            "complete": true,
+            "elapsedMs": 46,
+            "peakRssMiB": 86,
+            "rssMiB": 86
+          },
+          {
+            "files": 3,
+            "endpoints": 0,
+            "findings": {
+              "IPC001": 0,
+              "IPC002": 0,
+              "IPC003": 0,
+              "IPC004": 0,
+              "IPC005": 0,
+              "IPC006": 0,
+              "IPC007": 0,
+              "IPC008": 0,
+              "IPC009": 0
+            },
+            "findingsBySeverity": {
+              "critical": 0,
+              "high": 0,
+              "medium": 0,
+              "low": 0,
+              "informational": 0
+            },
+            "inconclusive": 0,
+            "complete": true,
+            "elapsedMs": 48,
+            "peakRssMiB": 86,
+            "rssMiB": 85
+          }
+        ],
+        "candidate": [
+          {
+            "files": 3,
+            "endpoints": 0,
+            "findings": {
+              "IPC001": 0,
+              "IPC002": 0,
+              "IPC003": 0,
+              "IPC004": 0,
+              "IPC005": 0,
+              "IPC006": 0,
+              "IPC007": 0,
+              "IPC008": 0,
+              "IPC009": 0
+            },
+            "findingsBySeverity": {
+              "critical": 0,
+              "high": 0,
+              "medium": 0,
+              "low": 0,
+              "informational": 0
+            },
+            "inconclusive": 0,
+            "complete": true,
+            "elapsedMs": 47,
+            "peakRssMiB": 86,
+            "rssMiB": 85
+          },
+          {
+            "files": 3,
+            "endpoints": 0,
+            "findings": {
+              "IPC001": 0,
+              "IPC002": 0,
+              "IPC003": 0,
+              "IPC004": 0,
+              "IPC005": 0,
+              "IPC006": 0,
+              "IPC007": 0,
+              "IPC008": 0,
+              "IPC009": 0
+            },
+            "findingsBySeverity": {
+              "critical": 0,
+              "high": 0,
+              "medium": 0,
+              "low": 0,
+              "informational": 0
+            },
+            "inconclusive": 0,
+            "complete": true,
+            "elapsedMs": 47,
+            "peakRssMiB": 86,
+            "rssMiB": 86
+          },
+          {
+            "files": 3,
+            "endpoints": 0,
+            "findings": {
+              "IPC001": 0,
+              "IPC002": 0,
+              "IPC003": 0,
+              "IPC004": 0,
+              "IPC005": 0,
+              "IPC006": 0,
+              "IPC007": 0,
+              "IPC008": 0,
+              "IPC009": 0
+            },
+            "findingsBySeverity": {
+              "critical": 0,
+              "high": 0,
+              "medium": 0,
+              "low": 0,
+              "informational": 0
+            },
+            "inconclusive": 0,
+            "complete": true,
+            "elapsedMs": 50,
+            "peakRssMiB": 87,
+            "rssMiB": 86
+          }
+        ]
+      }
+    },
+    {
+      "name": "electron-vite-react",
+      "commit": "18d31d5dcfe6637aa1dd6699babcab1849c83f98",
+      "runs": {
+        "baseline": [
+          {
+            "files": 15,
+            "endpoints": 8,
+            "findings": {
+              "IPC001": 4,
+              "IPC002": 0,
+              "IPC003": 0,
+              "IPC004": 0,
+              "IPC005": 2,
+              "IPC006": 1,
+              "IPC007": 3,
+              "IPC008": 0,
+              "IPC009": 0
+            },
+            "findingsBySeverity": {
+              "critical": 0,
+              "high": 6,
+              "medium": 1,
+              "low": 0,
+              "informational": 3
+            },
+            "inconclusive": 3,
+            "complete": true,
+            "elapsedMs": 128,
+            "peakRssMiB": 97,
+            "rssMiB": 95
+          },
+          {
+            "files": 15,
+            "endpoints": 8,
+            "findings": {
+              "IPC001": 4,
+              "IPC002": 0,
+              "IPC003": 0,
+              "IPC004": 0,
+              "IPC005": 2,
+              "IPC006": 1,
+              "IPC007": 3,
+              "IPC008": 0,
+              "IPC009": 0
+            },
+            "findingsBySeverity": {
+              "critical": 0,
+              "high": 6,
+              "medium": 1,
+              "low": 0,
+              "informational": 3
+            },
+            "inconclusive": 3,
+            "complete": true,
+            "elapsedMs": 118,
+            "peakRssMiB": 97,
+            "rssMiB": 95
+          },
+          {
+            "files": 15,
+            "endpoints": 8,
+            "findings": {
+              "IPC001": 4,
+              "IPC002": 0,
+              "IPC003": 0,
+              "IPC004": 0,
+              "IPC005": 2,
+              "IPC006": 1,
+              "IPC007": 3,
+              "IPC008": 0,
+              "IPC009": 0
+            },
+            "findingsBySeverity": {
+              "critical": 0,
+              "high": 6,
+              "medium": 1,
+              "low": 0,
+              "informational": 3
+            },
+            "inconclusive": 3,
+            "complete": true,
+            "elapsedMs": 116,
+            "peakRssMiB": 96,
+            "rssMiB": 95
+          }
+        ],
+        "candidate": [
+          {
+            "files": 15,
+            "endpoints": 8,
+            "findings": {
+              "IPC001": 4,
+              "IPC002": 0,
+              "IPC003": 0,
+              "IPC004": 0,
+              "IPC005": 2,
+              "IPC006": 1,
+              "IPC007": 3,
+              "IPC008": 0,
+              "IPC009": 0
+            },
+            "findingsBySeverity": {
+              "critical": 0,
+              "high": 6,
+              "medium": 1,
+              "low": 0,
+              "informational": 3
+            },
+            "inconclusive": 3,
+            "complete": true,
+            "elapsedMs": 148,
+            "peakRssMiB": 100,
+            "rssMiB": 98
+          },
+          {
+            "files": 15,
+            "endpoints": 8,
+            "findings": {
+              "IPC001": 4,
+              "IPC002": 0,
+              "IPC003": 0,
+              "IPC004": 0,
+              "IPC005": 2,
+              "IPC006": 1,
+              "IPC007": 3,
+              "IPC008": 0,
+              "IPC009": 0
+            },
+            "findingsBySeverity": {
+              "critical": 0,
+              "high": 6,
+              "medium": 1,
+              "low": 0,
+              "informational": 3
+            },
+            "inconclusive": 3,
+            "complete": true,
+            "elapsedMs": 124,
+            "peakRssMiB": 100,
+            "rssMiB": 97
+          },
+          {
+            "files": 15,
+            "endpoints": 8,
+            "findings": {
+              "IPC001": 4,
+              "IPC002": 0,
+              "IPC003": 0,
+              "IPC004": 0,
+              "IPC005": 2,
+              "IPC006": 1,
+              "IPC007": 3,
+              "IPC008": 0,
+              "IPC009": 0
+            },
+            "findingsBySeverity": {
+              "critical": 0,
+              "high": 6,
+              "medium": 1,
+              "low": 0,
+              "informational": 3
+            },
+            "inconclusive": 3,
+            "complete": true,
+            "elapsedMs": 144,
+            "peakRssMiB": 99,
+            "rssMiB": 97
+          }
+        ]
+      }
+    },
+    {
+      "name": "electron-fiddle",
+      "commit": "a63225b53664fd750828c29aa35de4b4d0eb0b28",
+      "runs": {
+        "baseline": [
+          {
+            "files": 290,
+            "endpoints": 66,
+            "findings": {
+              "IPC001": 0,
+              "IPC002": 0,
+              "IPC003": 56,
+              "IPC004": 1,
+              "IPC005": 0,
+              "IPC006": 2,
+              "IPC007": 3,
+              "IPC008": 9,
+              "IPC009": 0
+            },
+            "findingsBySeverity": {
+              "critical": 0,
+              "high": 0,
+              "medium": 3,
+              "low": 56,
+              "informational": 12
+            },
+            "inconclusive": 68,
+            "complete": false,
+            "elapsedMs": 993,
+            "peakRssMiB": 265,
+            "rssMiB": 264
+          },
+          {
+            "files": 290,
+            "endpoints": 66,
+            "findings": {
+              "IPC001": 0,
+              "IPC002": 0,
+              "IPC003": 56,
+              "IPC004": 1,
+              "IPC005": 0,
+              "IPC006": 2,
+              "IPC007": 3,
+              "IPC008": 9,
+              "IPC009": 0
+            },
+            "findingsBySeverity": {
+              "critical": 0,
+              "high": 0,
+              "medium": 3,
+              "low": 56,
+              "informational": 12
+            },
+            "inconclusive": 68,
+            "complete": false,
+            "elapsedMs": 998,
+            "peakRssMiB": 266,
+            "rssMiB": 262
+          },
+          {
+            "files": 290,
+            "endpoints": 66,
+            "findings": {
+              "IPC001": 0,
+              "IPC002": 0,
+              "IPC003": 56,
+              "IPC004": 1,
+              "IPC005": 0,
+              "IPC006": 2,
+              "IPC007": 3,
+              "IPC008": 9,
+              "IPC009": 0
+            },
+            "findingsBySeverity": {
+              "critical": 0,
+              "high": 0,
+              "medium": 3,
+              "low": 56,
+              "informational": 12
+            },
+            "inconclusive": 68,
+            "complete": false,
+            "elapsedMs": 1015,
+            "peakRssMiB": 264,
+            "rssMiB": 261
+          }
+        ],
+        "candidate": [
+          {
+            "files": 290,
+            "endpoints": 66,
+            "findings": {
+              "IPC001": 0,
+              "IPC002": 0,
+              "IPC003": 56,
+              "IPC004": 1,
+              "IPC005": 0,
+              "IPC006": 2,
+              "IPC007": 3,
+              "IPC008": 10,
+              "IPC009": 0
+            },
+            "findingsBySeverity": {
+              "critical": 0,
+              "high": 0,
+              "medium": 3,
+              "low": 56,
+              "informational": 13
+            },
+            "inconclusive": 69,
+            "complete": false,
+            "elapsedMs": 1073,
+            "peakRssMiB": 266,
+            "rssMiB": 266
+          },
+          {
+            "files": 290,
+            "endpoints": 66,
+            "findings": {
+              "IPC001": 0,
+              "IPC002": 0,
+              "IPC003": 56,
+              "IPC004": 1,
+              "IPC005": 0,
+              "IPC006": 2,
+              "IPC007": 3,
+              "IPC008": 10,
+              "IPC009": 0
+            },
+            "findingsBySeverity": {
+              "critical": 0,
+              "high": 0,
+              "medium": 3,
+              "low": 56,
+              "informational": 13
+            },
+            "inconclusive": 69,
+            "complete": false,
+            "elapsedMs": 1082,
+            "peakRssMiB": 268,
+            "rssMiB": 268
+          },
+          {
+            "files": 290,
+            "endpoints": 66,
+            "findings": {
+              "IPC001": 0,
+              "IPC002": 0,
+              "IPC003": 56,
+              "IPC004": 1,
+              "IPC005": 0,
+              "IPC006": 2,
+              "IPC007": 3,
+              "IPC008": 10,
+              "IPC009": 0
+            },
+            "findingsBySeverity": {
+              "critical": 0,
+              "high": 0,
+              "medium": 3,
+              "low": 56,
+              "informational": 13
+            },
+            "inconclusive": 69,
+            "complete": false,
+            "elapsedMs": 1085,
+            "peakRssMiB": 266,
+            "rssMiB": 264
+          }
+        ]
+      }
+    },
+    {
+      "name": "signal-desktop",
+      "commit": "5c1a030485ea64a1c311288cd6b5eecbe36964cd",
+      "runs": {
+        "baseline": [
+          {
+            "files": 3001,
+            "endpoints": 279,
+            "findings": {
+              "IPC001": 0,
+              "IPC002": 4,
+              "IPC003": 8,
+              "IPC004": 1,
+              "IPC005": 0,
+              "IPC006": 10,
+              "IPC007": 26,
+              "IPC008": 28,
+              "IPC009": 0
+            },
+            "findingsBySeverity": {
+              "critical": 0,
+              "high": 0,
+              "medium": 15,
+              "low": 8,
+              "informational": 54
+            },
+            "inconclusive": 62,
+            "complete": false,
+            "elapsedMs": 9364,
+            "peakRssMiB": 893,
+            "rssMiB": 893
+          },
+          {
+            "files": 3001,
+            "endpoints": 279,
+            "findings": {
+              "IPC001": 0,
+              "IPC002": 4,
+              "IPC003": 8,
+              "IPC004": 1,
+              "IPC005": 0,
+              "IPC006": 10,
+              "IPC007": 26,
+              "IPC008": 28,
+              "IPC009": 0
+            },
+            "findingsBySeverity": {
+              "critical": 0,
+              "high": 0,
+              "medium": 15,
+              "low": 8,
+              "informational": 54
+            },
+            "inconclusive": 62,
+            "complete": false,
+            "elapsedMs": 9555,
+            "peakRssMiB": 896,
+            "rssMiB": 896
+          },
+          {
+            "files": 3001,
+            "endpoints": 279,
+            "findings": {
+              "IPC001": 0,
+              "IPC002": 4,
+              "IPC003": 8,
+              "IPC004": 1,
+              "IPC005": 0,
+              "IPC006": 10,
+              "IPC007": 26,
+              "IPC008": 28,
+              "IPC009": 0
+            },
+            "findingsBySeverity": {
+              "critical": 0,
+              "high": 0,
+              "medium": 15,
+              "low": 8,
+              "informational": 54
+            },
+            "inconclusive": 62,
+            "complete": false,
+            "elapsedMs": 9351,
+            "peakRssMiB": 894,
+            "rssMiB": 894
+          }
+        ],
+        "candidate": [
+          {
+            "files": 3001,
+            "endpoints": 279,
+            "findings": {
+              "IPC001": 0,
+              "IPC002": 10,
+              "IPC003": 8,
+              "IPC004": 1,
+              "IPC005": 0,
+              "IPC006": 10,
+              "IPC007": 26,
+              "IPC008": 28,
+              "IPC009": 0
+            },
+            "findingsBySeverity": {
+              "critical": 0,
+              "high": 0,
+              "medium": 21,
+              "low": 8,
+              "informational": 54
+            },
+            "inconclusive": 62,
+            "complete": false,
+            "elapsedMs": 9727,
+            "peakRssMiB": 903,
+            "rssMiB": 903
+          },
+          {
+            "files": 3001,
+            "endpoints": 279,
+            "findings": {
+              "IPC001": 0,
+              "IPC002": 10,
+              "IPC003": 8,
+              "IPC004": 1,
+              "IPC005": 0,
+              "IPC006": 10,
+              "IPC007": 26,
+              "IPC008": 28,
+              "IPC009": 0
+            },
+            "findingsBySeverity": {
+              "critical": 0,
+              "high": 0,
+              "medium": 21,
+              "low": 8,
+              "informational": 54
+            },
+            "inconclusive": 62,
+            "complete": false,
+            "elapsedMs": 10256,
+            "peakRssMiB": 903,
+            "rssMiB": 903
+          },
+          {
+            "files": 3001,
+            "endpoints": 279,
+            "findings": {
+              "IPC001": 0,
+              "IPC002": 10,
+              "IPC003": 8,
+              "IPC004": 1,
+              "IPC005": 0,
+              "IPC006": 10,
+              "IPC007": 26,
+              "IPC008": 28,
+              "IPC009": 0
+            },
+            "findingsBySeverity": {
+              "critical": 0,
+              "high": 0,
+              "medium": 21,
+              "low": 8,
+              "informational": 54
+            },
+            "inconclusive": 62,
+            "complete": false,
+            "elapsedMs": 9916,
+            "peakRssMiB": 903,
+            "rssMiB": 903
+          }
+        ]
+      }
+    }
+  ]
+}

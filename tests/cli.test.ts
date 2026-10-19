@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtemp, readFile } from 'node:fs/promises';
+import { mkdtemp, readFile, mkdir, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -14,9 +14,41 @@ beforeAll(() => {
   ]);
 });
 describe('built CLI', () => {
+  it('accepts explicit application roots and keeps verbose machine output parseable', async () => {
+    const root = await mkdtemp(
+      path.join(os.tmpdir(), 'ipc-sentinel-cli-scopes-'),
+    );
+    for (const app of ['a', 'b']) {
+      await mkdir(path.join(root, app));
+      await writeFile(
+        path.join(root, app, 'main.ts'),
+        "import {ipcMain} from 'electron';ipcMain.handle('read',()=>1);",
+      );
+    }
+    const output = run(
+      'scan',
+      root,
+      '--application-root',
+      'a',
+      '--application-root',
+      'b',
+      '--format',
+      'json',
+      '--verbose',
+    );
+    expect(output.status).toBe(0);
+    expect(
+      JSON.parse(output.stdout).endpoints.map(
+        (e: { scope: string }) => e.scope,
+      ),
+    ).toEqual(['a', 'b']);
+    expect(run('scan', root, '--application-root', '../outside').status).toBe(
+      2,
+    );
+  });
   it('documents commands and returns its real version', () => {
     expect(run('--help').stdout).toContain('--fail-on');
-    expect(run('--version').stdout.trim()).toBe('0.1.0');
+    expect(run('--version').stdout.trim()).toBe('0.2.0');
     expect(run('rules').stdout).toContain('IPC009');
     expect(run('explain', 'IPC001').status).toBe(0);
   });
