@@ -4,9 +4,9 @@ Severity describes review priority. Confidence describes evidence for the report
 
 ## IPC001
 
-Dangerous IPC bridge exposure. High severity. Detects raw ipcRenderer object/method references (including aliases and unrestricted bind), functions forwarding a renderer parameter into a channel, direct listener callbacks, and a listener forwarding its event to another call. Nested statically resolvable objects are traversed. Fixed-channel invoke/send and listeners forwarding only payloads are accepted.
+Dangerous IPC bridge exposure. High severity. Detects raw ipcRenderer object/method references (including aliases and unrestricted bind), functions forwarding a renderer parameter into a channel or selected privileged APIs, direct listener callbacks, and a listener forwarding its event to another call. Nested statically resolvable objects are traversed. Fixed-channel invoke/send and listeners forwarding only payloads are accepted.
 
-Electron 29 disallows transfer of the entire ipcRenderer object; reporting this source pattern still identifies an attempted broad boundary or broken bridge, not proof that it works in every version. Channel allowlist guards are not proven; review the call before suppression. Complex returned APIs, custom wrappers, arbitrary event dataflow and Node capabilities other than raw IPC are not comprehensively analyzed.
+Electron 29 disallows transfer of the entire ipcRenderer object; reporting this source pattern still identifies an attempted broad boundary or broken bridge, not proof that it works in every version. Channel allowlist guards are not proven; review the call before suppression. Complex returned APIs, stateful wrappers, arbitrary event dataflow and Node capabilities other than raw IPC are not comprehensively analyzed.
 
 ```ts
 // Risk
@@ -45,7 +45,7 @@ External URL review. Medium severity, low confidence, potential. Detects shell.o
 
 ## IPC007
 
-Dynamic channel. Informational severity, high confidence that the expression is unresolved, inconclusive. Reports dynamic main and renderer channels including wrapper bodies. On the development branch, simple single-call forwarding wrappers are instantiated at caller locations to depth three. Conditional, default-parameter, stateful and class-based wrappers remain unresolved. Use shared constants or manually confirm routing. These observations do not alone mark source parsing incomplete.
+Dynamic channel. Informational severity, high confidence that the expression is unresolved, inconclusive. Reports dynamic main and renderer channels including wrapper bodies. In v0.2, bounded forwarding wrappers, constant preludes and pure function-returning factories are instantiated at caller locations to depth three. Conditional, default-parameter, stateful and class-based wrappers remain unresolved. Use shared constants or manually confirm routing. These observations do not alone mark source parsing incomplete.
 
 ## IPC008
 
@@ -55,8 +55,16 @@ Incomplete analysis. Informational severity, high confidence, inconclusive. Cove
 
 ## IPC009
 
-Insecure remote content. Medium severity, high confidence in the static source fact. Detects HTTP constants in loadURL on variables initialized with an Electron BrowserWindow, including bounded local aliases on the development branch. Unproven receivers are ignored to avoid unrelated method-name findings. HTTPS or local content should be combined with restrictive navigation, permissions and renderer isolation.
+Insecure remote content. Medium severity, high confidence in the static source fact. Detects HTTP constants in loadURL on variables initialized with an Electron BrowserWindow, including bounded local aliases. Unproven receivers are ignored to avoid unrelated method-name findings. HTTPS or local content should be combined with restrictive navigation, permissions and renderer isolation.
 
 ## General limitations
 
 No complete control-flow or taint model, mutable object tracking, package export resolver, arbitrary CommonJS exports, contract type proof, CSP parser, arbitrary window association or packaged fuse audit. Rules operate on discovered source rather than executable reachability. Diagnostics intentionally avoid embedding source snippets, URL values, payload values and channel names in messages. The endpoint inventory contains resolved channel names and paths; handle reports accordingly.
+
+## v0.2 evidence refinements
+
+IPC001 additionally reviews raw filesystem/process methods exposed through contextBridge and exposed functions with syntactically observed renderer-input dependencies into selected privileged APIs. Fixed inputs are not inherently unsafe. Event aliases/spreads are followed; extracting primitive senderFrame.url metadata is not classified as leaking the whole event. Opaque validation cannot be proved and findings remain potential.
+
+IPC002 covers selected filesystem/process APIs, shell.openExternal/openPath/showItemInFolder/trashItem and app.setPath/setLoginItemSettings/relaunch/exit/quit. Optional evidence.validation is observed-guard, delegated-guard, unverified or not-observed. An observed guard is an input-related if with an exiting branch; delegated means found in a called local helper; unverified means an opaque input-consuming call was seen without an observed guard. None establishes correct sender or payload enforcement. Guards after a sink remain observations and do not suppress review. evidence.ipcInput reports observed syntactic dependencies, not-observed within the model, or unresolved after a traversal limit. Supporting source locations and analysisLimited are included in JSON and SARIF properties. Not-observed never proves independence.
+
+IPC009 also reports a proven BrowserWindow.webContents.setWindowOpenHandler whose simple callback unconditionally returns action: allow. This is a potential review finding with medium confidence. Conditional allowlists, action: deny, loadFile and unrelated receivers do not trigger this addition. Conditional URL parsing, navigation event enforcement and child-window settings remain outside the model. HTTPS alone proves neither trusted content nor safe navigation.

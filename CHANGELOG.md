@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 � release candidate (unpublished)
 
 - Resolve enum channels, bounded local CommonJS exports and simple forwarded IPC wrappers at caller locations.
 - Add optional applicationRoots and endpoint scope to isolate independent application graphs.
@@ -10,7 +10,15 @@
 - Exclude bundled Yarn sources, add pinned public-source regressions and paired performance measurements.
 - Upgrade Vitest and its coverage provider together; group future testing updates in Dependabot.
 
-These changes are development-only. The published package remains 0.1.0. The additive configuration/API and changed findings warrant a future minor release, potentially 0.2.0, after review and explicit publication approval.
+- Add conservative Electron package graph discovery, inherited root-contained tsconfig aliases and ordered config overrides.
+- Expand pure closure factories and constant wrapper preludes; memoize scan-local function and handler summaries.
+- Attach optional IPC002 validation/input evidence to JSON and SARIF without suppressing review.
+- Review renderer-controlled privileged bridge calls, event aliases, shell/application configuration operations and unconditional window opening.
+- Add CLI --application-root, opt-in approved development-patch maintenance and stronger release validation.
+- Upgrade typescript-eslint to 8.71.2 and paired Vitest/coverage to 5.0.5 after isolated validation and final CI.
+- Prepare actual 0.2.0 tarball and compile a typed consumer against installed declarations.
+
+This candidate is unmerged and unpublished. npm remains 0.1.0. Publication, release tag and release workflow dispatch require exact commit/version approval. See docs/migration-v0.2.md for additive API fields, configuration changes and changed findings.
 
 ## 0.1.0 - 2026-10-12
 

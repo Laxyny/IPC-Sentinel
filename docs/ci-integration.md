@@ -51,14 +51,22 @@ The initial six-job remote matrix passed on the implementation revision recorded
 
 Before dispatch, the repository owner must:
 
-1. Explicitly approve `ipc-sentinel@0.1.0` and its final commit after reviewing validation.
+1. Explicitly approve `ipc-sentinel@0.2.0` and its final commit after reviewing validation.
 2. Confirm authenticated npm identity, name availability and package/scope ownership. E404 does not establish ownership or eligibility.
 3. Create GitHub environment `npm-release`, require reviewers, prevent self-review, and restrict deployment to the default branch. Without those external settings the environment name alone does not enforce approval.
 4. Configure the npm trusted publisher for owner `Laxyny`, repository `IPC-Sentinel`, workflow `release.yml`, and environment `npm-release`. Trusted publishing may require an existing package; if first publication requires interactive authenticated bootstrap, obtain exact approval and follow npm's current setup instructions. Never paste credentials into source.
-5. Push the reviewed revision and confirm the full six-job CI matrix before dispatching.
+5. Push the reviewed revision and confirm the six OS/Node jobs and pinned public-source regression job before dispatching.
 6. Dispatch manually with exact inputs; approve the protected environment after validating logs.
-7. Verify `npm view ipc-sentinel@0.1.0` and install it in a fresh consumer, then record the npm URL and revision.
+7. Verify `npm view ipc-sentinel@0.2.0` and install it in a fresh consumer, then record the npm URL and revision.
 
 The job grants id-token only to publication and uses npm provenance. [npm trusted publishing documentation](https://docs.npmjs.com/trusted-publishers/) is authoritative for account-side requirements. No npm token is committed or expected in the workflow. Existing versions cannot be republished; npm immutability and serialized release jobs prevent replacement or overlapping publication. Correct failed publication through a reviewed new version, not a force workflow.
 
 Release approval remains outstanding. A dry run verifies packaging; it does not authenticate a publisher, reserve a name, test provenance or publish anything.
+
+## Approved development maintenance
+
+Validation runs on pull requests and main pushes; concurrency cancels stale validation runs. Development branch pushes without a PR do not duplicate the PR matrix. The manual release gate additionally runs coverage and pinned public-source regressions.
+
+The maintenance workflow runs trusted default-branch policy code after successful PR validation; it never checks out or executes a PR with its write token. A same-repository Dependabot PR must change only package.json/package-lock.json, carry maintenance-approved, have a current-head approval from an owner/member/collaborator, no outstanding requested changes, include current main, and pass all seven required checks. Only exact patch increases to typescript-eslint or paired vitest/@vitest/coverage-v8 are eligible. Production dependency/lock entries, scripts, metadata, major/minor updates, unpaired peers and non-registry tarballs are rejected. The merge uses the expected SHA and normal branch protection. No bypass or unconditional automerge is configured.
+
+Apply approval and label before the final Validation run, or rerun Validation afterward; this workflow is not triggered by labeling alone. The policy has executable rejection tests. Its actual post-merge write-token operation requires repository-side permissions and has not been exercised by publishing or merging the feature PR. Protection settings and required owner actions are recorded in docs/v0.2-engineering.md.

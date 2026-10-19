@@ -1,0 +1,139 @@
+{
+  "node": "v24.19.0",
+  "platform": "win32",
+  "implementation": "v0.1 analyzer e08995f, test-only dependency upgrade",
+  "projects": [
+    {
+      "name": "electron-minimal-repro",
+      "repository": "https://github.com/electron/minimal-repro.git",
+      "commit": "1e3a9803707b420fe8ee1ef0cceb5a7d1106c17a",
+      "license": "CC0-1.0",
+      "architecture": "Plain JavaScript official reproduction template",
+      "electron": "^44.5.1",
+      "files": 3,
+      "endpoints": 0,
+      "findings": {
+        "IPC001": 0,
+        "IPC002": 0,
+        "IPC003": 0,
+        "IPC004": 0,
+        "IPC005": 0,
+        "IPC006": 0,
+        "IPC007": 0,
+        "IPC008": 0,
+        "IPC009": 0
+      },
+      "findingsBySeverity": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "informational": 0
+      },
+      "inconclusive": 0,
+      "complete": true,
+      "elapsedMs": 41,
+      "peakRssMiB": 90,
+      "rssMiB": 90
+    },
+    {
+      "name": "electron-vite-react",
+      "repository": "https://github.com/electron-vite/electron-vite-react.git",
+      "commit": "18d31d5dcfe6637aa1dd6699babcab1849c83f98",
+      "license": "MIT",
+      "architecture": "TypeScript, React, Vite, electron-builder",
+      "electron": "^42.1.0",
+      "files": 15,
+      "endpoints": 8,
+      "findings": {
+        "IPC001": 1,
+        "IPC002": 0,
+        "IPC003": 0,
+        "IPC004": 0,
+        "IPC005": 2,
+        "IPC006": 1,
+        "IPC007": 3,
+        "IPC008": 0,
+        "IPC009": 0
+      },
+      "findingsBySeverity": {
+        "critical": 0,
+        "high": 3,
+        "medium": 1,
+        "low": 0,
+        "informational": 3
+      },
+      "inconclusive": 3,
+      "complete": true,
+      "elapsedMs": 126,
+      "peakRssMiB": 101,
+      "rssMiB": 100
+    },
+    {
+      "name": "electron-fiddle",
+      "repository": "https://github.com/electron/fiddle.git",
+      "commit": "a63225b53664fd750828c29aa35de4b4d0eb0b28",
+      "license": "MIT",
+      "architecture": "TypeScript, React, Electron Forge, channel registry, multiple windows",
+      "electron": "^42.3.3",
+      "files": 290,
+      "endpoints": 65,
+      "findings": {
+        "IPC001": 0,
+        "IPC002": 0,
+        "IPC003": 0,
+        "IPC004": 0,
+        "IPC005": 0,
+        "IPC006": 2,
+        "IPC007": 63,
+        "IPC008": 10,
+        "IPC009": 0
+      },
+      "findingsBySeverity": {
+        "critical": 0,
+        "high": 0,
+        "medium": 2,
+        "low": 0,
+        "informational": 73
+      },
+      "inconclusive": 73,
+      "complete": false,
+      "elapsedMs": 922,
+      "peakRssMiB": 263,
+      "rssMiB": 263
+    },
+    {
+      "name": "signal-desktop",
+      "repository": "https://github.com/signalapp/Signal-Desktop.git",
+      "commit": "5c1a030485ea64a1c311288cd6b5eecbe36964cd",
+      "license": "AGPL-3.0",
+      "architecture": "Large TypeScript/React application, electron-builder, multiple preloads, IPC wrappers",
+      "electron": "44.4.5",
+      "files": 3001,
+      "endpoints": 269,
+      "findings": {
+        "IPC001": 0,
+        "IPC002": 9,
+        "IPC003": 8,
+        "IPC004": 1,
+        "IPC005": 0,
+        "IPC006": 10,
+        "IPC007": 16,
+        "IPC008": 28,
+        "IPC009": 0
+      },
+      "findingsBySeverity": {
+        "critical": 0,
+        "high": 0,
+        "medium": 20,
+        "low": 8,
+        "informational": 44
+      },
+      "inconclusive": 52,
+      "complete": false,
+      "elapsedMs": 7795,
+      "peakRssMiB": 863,
+      "rssMiB": 863
+    }
+  ]
+}

@@ -26,18 +26,26 @@ IPC boundaries are easy to widen accidentally: a preload can forward arbitrary c
 
 **Source stays local.** Scanning does not execute your project or send its source over the network. Every finding includes evidence and remediation guidance.
 
-Version 0.1.0 is the initial release, with documented rule limits and conservative confidence levels. See [release validation](docs/release-validation.md) for the checks performed.
+This branch prepares **v0.2.0** for review. npm currently serves **v0.1.0**; the candidate has not been published. See [v0.2 engineering and validation](docs/v0.2-engineering.md) and the [migration guide](docs/migration-v0.2.md).
 
 ## Capabilities
 
-**Development preview:** the unreleased branch adds simple wrapper expansion, enum/local CommonJS constants and optional application graphs. See the [public-project validation report](docs/real-world-validation.md) for measured results and limits. These additions are not in npm 0.1.0.
+| Capability             | Published v0.1.0                | v0.2.0 candidate                                                           |
+| ---------------------- | ------------------------------- | -------------------------------------------------------------------------- |
+| Application boundaries | One graph per scan              | Explicit roots and conservative Electron package detection                 |
+| Channel resolution     | Local constants and ESM aliases | Enums, local CommonJS registries, inherited tsconfig paths                 |
+| IPC wrappers           | Dynamic body observations       | Bounded forwarding, object methods and pure closure factories              |
+| Privileged review      | Potential handler finding       | Guard locations, local-helper evidence and input dependencies              |
+| Bridge/navigation      | Raw IPC and HTTP loads          | Node capabilities, event aliases and unconditional child-window permission |
+
+The candidate keeps rule IDs IPC001�IPC009, report schema version 1 and documented CLI exit codes. Optional evidence fields are additive; changed findings may require CI baseline review.
 
 - Distinguishes `invoke/handle` from `send/on`, including common one-shot variants.
 - Finds undiscovered handlers, duplicate invoke registration sites, dynamic channels, and method mismatches.
 - Reviews raw IPC bridge exposure, parameter-selected channels, and callbacks that forward Electron event objects.
 - Checks explicit unsafe BrowserWindow preferences and HTTP content loads.
 - Recommends validation review when discovered handlers reach selected filesystem, child-process, or external URL APIs, including local helpers.
-- Resolves ESM imports, re-exports, namespaces, CommonJS Electron destructuring, local aliases, const expressions and project-local TypeScript path aliases.
+- Resolves ESM imports/re-exports, enums, bounded local CommonJS exports, local constants and root-contained inherited TypeScript path aliases.
 - Produces deterministic text, JSON and SARIF 2.1.0 with auditable suppressions.
 
 ## Installation and quick start
@@ -60,7 +68,7 @@ npm ci
 npm run build
 npm pack
 # From your Electron application directory:
-npm install --save-dev /path/to/ipc-sentinel-0.1.0.tgz
+npm install --save-dev /path/to/ipc-sentinel-0.2.0.tgz
 npx ipc-sentinel scan .
 ```
 
@@ -174,13 +182,15 @@ No source evaluation, project scripts, config imports, telemetry, account or net
 
 This is a static review tool, not proof of application security. Finding kinds separate `static` source facts, `potential` risks, `inconclusive` analysis, and informational observations. Confidence describes the evidence for that finding, not exploitability. `complete` means no detected parse/configuration/resource failure within the documented scope, not coverage of every runtime behavior. Dynamic channels remain inconclusive even in a complete scan.
 
-There is no complete control-flow, taint or contract compatibility analysis. No parameter-selected-channel allowlist proof, request/response type comparison, general wrapper expansion, independent-window reachability or runtime registration-order model. IPC002 intentionally asks for review even when a helper validates requests; names or a call to `validate` do not prove all paths are guarded. Local helpers are followed to depth three; imported runtime libraries are not inspected. Navigation policies, permission handlers, preload path resolution, CSP, fuses and remote-code trust are not comprehensively audited. External HTTPS constants are not a general guarantee of safe destinations. Const object evaluation assumes no later mutation. The development branch recognizes bounded local CommonJS exports; conditional exports, external packages and tsconfig inheritance remain unresolved. No autofix is offered because security boundary changes require application-specific decisions.
+There is no complete control-flow, taint or contract compatibility analysis. No parameter-selected-channel allowlist proof, request/response type comparison, general wrapper expansion, independent-window reachability or runtime registration-order model. IPC002 intentionally asks for review even when a helper validates requests; names or a call to `validate` do not prove all paths are guarded. Local helpers are followed to depth three; opaque runtime libraries are not inspected. Guard evidence does not establish ordering, dominance or correct validation. Navigation policies, permission handlers, preload path resolution, CSP, fuses and remote-code trust are not comprehensively audited. External HTTPS constants are not a general guarantee of safe destinations. Const object evaluation assumes no later mutation. Local CommonJS exports and relative root-contained tsconfig inheritance are supported; conditional exports, external packages and package-based inheritance remain unresolved. No autofix is offered because security boundary changes require application-specific decisions.
 
 Source discovery skips symlinks, dependencies and generated outputs, limits file/byte counts, and sanitizes terminal control characters. These are defensive safeguards, not isolation against a concurrently mutating hostile filesystem. [Architecture](docs/architecture.md) and [research](docs/research-and-positioning.md) explain the tradeoffs.
 
 ## Documentation
 
-- [Real-world validation](docs/real-world-validation.md): pinned projects, reviewed findings, regressions and performance.
+- [v0.2 engineering](docs/v0.2-engineering.md): pinned projects, reviewed findings, measured performance and maintenance decisions.
+- [Migration](docs/migration-v0.2.md): configuration, evidence fields and changed diagnostics.
+- [Earlier validation](docs/real-world-validation.md): historical hardening evidence.
 - [Dependabot audit](docs/dependabot-audit.md): compatibility checks and decisions for every dependency PR.
 
 | Guide                                                        | What you will find                                                               |
@@ -205,4 +215,4 @@ The lockfile pins dependencies. Tests cover secure/unsafe project fixtures, fals
 
 See [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), [SECURITY.md](SECURITY.md), and [CHANGELOG.md](CHANGELOG.md). Licensed under [MIT](LICENSE).
 
-The development branch implements explicit app scopes and simple wrapper models. Future priorities include explicit validator contracts and richer navigation/bridge dataflow analysis. Later releases can add serialization-aware contract checks, safe editor integration and packaged fuse audits, each with false-positive regression fixtures.
+Future priorities include stateful wrapper adapters, entry-point/build-target reachability, explicit validator contracts and richer navigation/bridge dataflow analysis. Later releases can add serialization-aware contract checks, safe editor integration and packaged fuse audits, each with false-positive regression fixtures.
