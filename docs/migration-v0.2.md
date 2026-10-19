@@ -1,6 +1,6 @@
-# Migrating to the v0.2.0 candidate
+# Migrating to v0.2.0
 
-The candidate is not yet published. npm continues to serve 0.1.0. Build this branch and install ipc-sentinel-0.2.0.tgz to evaluate it. Package identity, Node >=22.13, ESM/native CommonJS interoperability, exported entry points, rule IDs, SARIF 2.1.0, JSON schemaVersion 1 and CLI exits 0/1/2 remain unchanged.
+Install the release with npm install --save-dev ipc-sentinel@0.2.0, or build from source and install ipc-sentinel-0.2.0.tgz. Package identity, Node >=22.13, ESM/native CommonJS interoperability, exported entry points, rule IDs, SARIF 2.1.0, JSON schemaVersion 1 and CLI exits 0/1/2 remain unchanged.
 
 ## Additive API
 
